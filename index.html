@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Moonlight Arcade</title>
+<title>moonlight - games</title>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
@@ -26,7 +26,7 @@
 
     .wrap { max-width: 1400px; margin: 0 auto; padding: 30px; }
 
-    /* Glassmorphic Header */
+    /* Header */
     .header {
         display: flex; flex-direction: column; gap: 20px; padding: 20px; margin-bottom: 40px;
         background: var(--glass); border: 1px solid var(--glass-border); border-radius: 20px;
@@ -36,7 +36,6 @@
 
     .brand { display: flex; align-items: center; gap: 15px; }
     .brand-text h1 { margin: 0; font-size: 24px; font-weight: 600; }
-    /* Updated status text style */
     .brand-text p { margin: 0; font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; font-weight: 500; }
 
     .controls { display: flex; gap: 10px; flex-wrap: wrap; }
@@ -48,6 +47,26 @@
     button { cursor: pointer; transition: 0.3s; }
     button:hover { background: white; color: black; }
 
+    /* Mission Popup Styles */
+    .popup-overlay {
+        position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+        background: rgba(0,0,0,0.8); backdrop-filter: blur(8px);
+        z-index: 10000; display: flex; align-items: center; justify-content: center;
+        opacity: 0; visibility: hidden; transition: 0.4s;
+    }
+    .popup-overlay.show { opacity: 1; visibility: visible; }
+    
+    .popup-content {
+        background: #0a0a0a; border: 1px solid var(--glass-border);
+        padding: 40px; border-radius: 24px; max-width: 500px; width: 90%;
+        text-align: center; transform: scale(0.9); transition: 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+    .popup-overlay.show .popup-content { transform: scale(1); }
+    
+    .popup-content h2 { margin-top: 0; font-size: 28px; font-weight: 700; }
+    .popup-content p { color: var(--text-muted); line-height: 1.6; font-size: 16px; margin-bottom: 30px; }
+    .continue-btn { width: 100%; padding: 15px; font-weight: 700; font-size: 16px; }
+
     /* Grid & Cards */
     .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 25px; }
     .card {
@@ -56,7 +75,6 @@
     }
     .card:hover { transform: translateY(-8px); border-color: rgba(255,255,255,0.3); }
     
-    /* REVERTED: Removed grayscale filter */
     .thumb { width: 100%; aspect-ratio: 16/9; background: #111; overflow: hidden; }
     .thumb img { width: 100%; height: 100%; object-fit: cover; transition: 0.6s; }
     .card:hover .thumb img { transform: scale(1.1); }
@@ -78,12 +96,11 @@
     iframe { width: 100%; height: 100%; border: none; }
     .modal-bar { height: 70px; background: #0a0a0a; border-top: 1px solid var(--glass-border); display: flex; align-items: center; justify-content: space-between; padding: 0 25px; }
     
-    /* Icon Buttons for Modal */
     .icon-btn { 
-        width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; 
-        border-radius: 50%; padding: 0; font-size: 18px;
+        width: 45px; height: 45px; display: flex; align-items: center; justify-content: center; 
+        border-radius: 12px; padding: 0; font-size: 20px; background: rgba(255,255,255,0.05);
     }
-    .close-btn:hover { background: #ff4444 !important; color: white !important; border-color: #ff4444 !important; }
+    .close-btn:hover { background: #ff3333 !important; color: white !important; border-color: #ff3333 !important; }
 
     /* Skeleton */
     .skeleton { background: var(--glass); height: 280px; border-radius: 16px; position: relative; overflow: hidden; }
@@ -93,27 +110,34 @@
 </head>
 <body>
 
+<div class="popup-overlay" id="missionPopup">
+    <div class="popup-content">
+        <h2>Welcome</h2>
+        <p>We believe gaming shouldn't have boundaries. Internet censorship is a relic of the past, and we’re here to break through it. Whether you're at school, work, or anywhere in between, Moonlight provides the unblocked access you deserve. Our library is small, but growing every day-stay tuned, the best is yet to come.</p>
+        <button class="continue-btn" id="closePopup">Continue</button>
+    </div>
+</div>
+
 <div class="wrap">
     <header class="header">
         <div class="brand">
-            <i class="fa-solid fa-moon"></i>
             <div class="brand-text">
                 <h1>Moonlight</h1>
                 <p id="statusText">Connecting...</p>
             </div>
         </div>
         <div class="controls">
-            <input type="text" id="searchInput" placeholder="Search games...">
-            <select id="sortSelect">
-                <option value="default">Sort by...</option>
+            <input type="text" id="searchInput" placeholder="Search library...">
+            <select hidden id="sortSelect">
+                <option value="default">Default</option>
                 <option value="alphabetical">A-Z</option>
-                <option value="plays">Most Played</option>
             </select>
-            <button id="refreshBtn"><i class="fa-solid fa-rotate"></i> Refresh</button>
+            <button id="refreshBtn"><i class="fa-solid fa-rotate"></i></button>
         </div>
     </header>
 
     <div id="contentArea" class="grid">
+        <div class="skeleton"></div><div class="skeleton"></div><div class="skeleton"></div>
         <div class="skeleton"></div><div class="skeleton"></div><div class="skeleton"></div>
     </div>
 </div>
@@ -124,7 +148,7 @@
         <div class="modal-bar">
             <div class="modal-info"><h2 id="modalTitle" style="margin:0; font-size:18px;">Game Title</h2></div>
             <div class="modal-controls" style="display:flex; gap:10px;">
-                <button id="modalReload" class="icon-btn" title="Reload Game"><i class="fa-solid fa-rotate-right"></i></button>
+                <button id="modalReload" class="icon-btn" title="Reload"><i class="fa-solid fa-rotate-right"></i></button>
                 <button id="modalClose" class="icon-btn close-btn" title="Close"><i class="fa-solid fa-xmark"></i></button>
             </div>
         </div>
@@ -132,116 +156,92 @@
 </div>
 
 <script type="module">
-    console.log("[SYSTEM] Starting Moonlight Arcade...");
-
     let games = [];
-    let supabase = null;
-    let fetchTime = null; // Store when data was fetched
+    let fetchTime = null;
+    let currentGame = null;
 
     const contentArea = document.getElementById('contentArea');
-    const searchInput = document.getElementById('searchInput');
-    const sortSelect = document.getElementById('sortSelect');
+    const statusText = document.getElementById('statusText');
     const gameModal = document.getElementById('gameModal');
     const gameFrame = document.getElementById('gameFrame');
-    const statusText = document.getElementById('statusText');
+    const missionPopup = document.getElementById('missionPopup');
+    const closePopupBtn = document.getElementById('closePopup');
 
-    // --- 1. Supabase Client Creation ---
-    function createAndDispatchClient() {
-        try {
-            const supabaseUrl = 'https://mrkhmlhrbtedudclwfli.supabase.co';
-            const supabaseKey = 'sb_publishable_Ej0sVQdRrHnWnctlZxWI3g_djchZi4L';
-            
-            if (!window.supabase || typeof window.supabase.createClient !== 'function') {
-                return false;
-            }
-            
-            window.supabaseClient = window.supabase.createClient(supabaseUrl, supabaseKey);
-            window.dispatchEvent(new CustomEvent('supabase-ready', { detail: { client: window.supabaseClient } }));
-            return true;
-        } catch (e) {
-            console.error('[SUPABASE] error', e);
-            return false;
+    // Handle Popup Logic
+    window.addEventListener('load', () => {
+        // Only show if user hasn't seen it before
+        if (!localStorage.getItem('missionSeen')) {
+            setTimeout(() => {
+                missionPopup.classList.add('show');
+            }, 500);
+        }
+    });
+
+    closePopupBtn.onclick = () => {
+        missionPopup.classList.remove('show');
+        localStorage.setItem('missionSeen', 'true');
+    };
+
+    // --- FALLBACK HTML ---
+    const FALLBACK_HTML = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+            <style>
+                body { background: #050505; color: #fff; font-family: 'Inter Tight', sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; margin: 0; text-align: center; }
+                .container { max-width: 400px; padding: 20px; }
+                i { font-size: 50px; color: #ffcc00; margin-bottom: 20px; }
+                h1 { margin: 10px 0; font-size: 24px; font-weight: 600; }
+                p { color: #888; line-height: 1.5; font-size: 16px; }
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <i class="fa-solid fa-triangle-exclamation"></i>
+                <h1>Game couldn't be fetched.</h1>
+                <p>Don't worry, it's on us. Looks like this game is missing valid source code, we're working on it.</p>
+            </div>
+        </body>
+        </html>
+    `;
+
+    function initSupabase() {
+        const url = 'https://mrkhmlhrbtedudclwfli.supabase.co';
+        const key = 'sb_publishable_Ej0sVQdRrHnWnctlZxWI3g_djchZi4L';
+        if (window.supabase) {
+            window.supabaseClient = window.supabase.createClient(url, key);
+            window.dispatchEvent(new CustomEvent('supabase-ready'));
         }
     }
 
-    // --- 2. STATUS TEXT UPDATE LOGIC ---
-    function startStatusUpdater() {
-        // Run immediately
-        updateStatusText();
-        // Then run every minute
-        setInterval(updateStatusText, 60000);
+    function updateStatus() {
+        if (!fetchTime) return;
+        const diff = Math.floor((Date.now() - fetchTime) / 60000);
+        if (diff < 1) statusText.innerText = "LAST UPDATED JUST NOW";
+        else statusText.innerText = `UPDATED ${diff} MINUTE${diff === 1 ? '' : 'S'} AGO`;
     }
 
-    function updateStatusText() {
-        if (!fetchTime) {
-            statusText.innerText = "WAITING FOR DATA...";
-            return;
-        }
-
-        const now = Date.now();
-        const diffMs = now - fetchTime;
-        const diffMins = Math.floor(diffMs / 60000);
-
-        if (diffMins < 1) {
-            statusText.innerText = "LAST UPDATED JUST NOW";
-        } else if (diffMins < 60) {
-            statusText.innerText = `UPDATED ${diffMins} MINUTE${diffMins === 1 ? '' : 'S'} AGO`;
-        } else {
-            const diffHours = Math.floor(diffMins / 60);
-            if (diffHours < 24) {
-                statusText.innerText = `UPDATED ${diffHours} HOUR${diffHours === 1 ? '' : 'S'} AGO`;
-            } else {
-                const diffDays = Math.floor(diffHours / 24);
-                statusText.innerText = `UPDATED ${diffDays} DAY${diffDays === 1 ? '' : 'S'} AGO`;
-            }
-        }
-    }
-
-    // --- 3. DATA LOADING ---
     async function loadData() {
-        if (!window.supabaseClient) return;
-
-        console.log("[DATA] Fetching games...");
-        // Added .range(0, 999) to ensure we get up to 1000 items
-        const { data, error } = await window.supabaseClient
-            .from('games')
-            .select('*')
-            .range(0, 999); 
-
-        if (error) {
-            console.error("[DATA] Error:", error);
-            statusText.innerText = "ERROR LOADING DATA";
-            return;
-        }
-
-        console.log(`[DATA] Loaded ${data.length} games.`);
+        const { data, error } = await window.supabaseClient.from('games').select('*').range(0, 999);
+        if (error) return console.error(error);
         games = data;
-        
-        // Update Time Logic
         fetchTime = Date.now();
-        startStatusUpdater();
-
+        updateStatus();
+        setInterval(updateStatus, 60000);
         renderGrid(games);
     }
 
-    // --- 4. UI RENDERING ---
     function renderGrid(data) {
         contentArea.innerHTML = '';
-        if(data.length === 0) {
-            contentArea.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:50px;">No games found.</div>';
-            return;
-        }
-
         data.forEach(game => {
             const card = document.createElement('div');
             card.className = 'card';
             card.innerHTML = `
-                <div class="thumb"><img src="${game.img_url || ''}" alt="" loading="lazy"></div>
+                <div class="thumb"><img src="${game.img_url || ''}"></div>
                 <div class="card-content">
                     <div class="game-title">${game.name}</div>
-                    <div class="card-actions">
-                        <button class="play-btn"><i class="fa-solid fa-play"></i> Play</button>
-                    </div>
+                    <div class="card-actions"><button class="play-btn"><i class="fa-solid fa-play"></i> Play</button></div>
                 </div>
             `;
             card.querySelector('.play-btn').onclick = () => openGame(game);
@@ -249,62 +249,44 @@
         });
     }
 
-    // --- 5. GAME MODAL LOGIC ---
     function openGame(game) {
+        currentGame = game;
         document.getElementById('modalTitle').textContent = game.name;
         gameModal.classList.add('active');
         
+        const isUrlBroken = (game.url && game.url.startsWith('/'));
+        
         if (game.html) {
-            gameFrame.src = 'about:blank';
-            setTimeout(() => {
-                const doc = gameFrame.contentWindow.document;
-                doc.open();
-                doc.write(game.html);
-                doc.close();
-            }, 50);
-        } else {
+            injectHtml(game.html);
+        } else if (game.url && !isUrlBroken) {
             gameFrame.src = game.url;
+        } else {
+            injectHtml(FALLBACK_HTML);
         }
     }
 
-    // Close Button Logic
-    document.getElementById('modalClose').onclick = () => {
-        gameModal.classList.remove('active');
-        gameFrame.src = '';
-    };
+    function injectHtml(htmlCode) {
+        gameFrame.src = 'about:blank';
+        setTimeout(() => {
+            const doc = gameFrame.contentWindow.document;
+            doc.open();
+            doc.write(htmlCode);
+            doc.close();
+        }, 50);
+    }
+
+    document.getElementById('modalClose').onclick = () => { gameModal.classList.remove('active'); gameFrame.src = ''; };
+    document.getElementById('modalReload').onclick = () => { if(currentGame) openGame(currentGame); };
     
-    // Reload Button Logic
-    document.getElementById('modalReload').onclick = () => {
-        const currentSrc = gameFrame.src;
-        // Simple reload trick for iframes
-        gameFrame.src = ''; 
-        setTimeout(() => { gameFrame.src = currentSrc; }, 10);
-    };
-
-    // --- 6. INITIALIZATION SEQUENCE ---
-    window.addEventListener('supabase-ready', (e) => {
-        supabase = e.detail.client;
-        loadData();
-    });
-
-    const checkSupabaseExist = setInterval(() => {
-        if (window.supabase) {
-            createAndDispatchClient();
-            clearInterval(checkSupabaseExist);
-        }
-    }, 100);
-
-    // Search Logic
-    searchInput.oninput = (e) => {
+    document.getElementById('searchInput').oninput = (e) => {
         const term = e.target.value.toLowerCase();
-        const filtered = games.filter(g => g.name.toLowerCase().includes(term));
-        renderGrid(filtered);
+        renderGrid(games.filter(g => g.name.toLowerCase().includes(term)));
     };
 
-    document.getElementById('refreshBtn').onclick = () => {
-        contentArea.innerHTML = '<div class="skeleton"></div><div class="skeleton"></div><div class="skeleton"></div>';
-        loadData();
-    };
+    document.getElementById('refreshBtn').onclick = () => location.reload();
+
+    window.addEventListener('supabase-ready', loadData);
+    const checkSup = setInterval(() => { if(window.supabase) { initSupabase(); clearInterval(checkSup); } }, 100);
 
 </script>
 </body>
