@@ -1,0 +1,638 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Moonlight Arcade</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<script src="/js/chip.js"></script>
+
+<style>
+    :root {
+        --bg: #050505;
+        --card-bg: rgba(20, 20, 20, 0.6);
+        --glass: rgba(255, 255, 255, 0.03);
+        --glass-border: rgba(255, 255, 255, 0.08);
+        --glass-highlight: rgba(255, 255, 255, 0.15);
+        --text-main: #ffffff;
+        --text-muted: #888888;
+        --accent: #ffffff;
+        --font: 'Inter Tight', sans-serif;
+    }
+
+    * { box-sizing: border-box; outline: none; }
+    
+    body {
+        margin: 0;
+        background-color: var(--bg);
+        color: var(--text-main);
+        font-family: var(--font);
+        overflow-x: hidden;
+        min-height: 100vh;
+    }
+
+    /* --- Layout & Header --- */
+    .wrap {
+        max-width: 1400px;
+        margin: 0 auto;
+        padding: 20px;
+    }
+
+    .header {
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+        margin-bottom: 40px;
+        padding-bottom: 20px;
+        border-bottom: 1px solid var(--glass-border);
+    }
+
+    @media(min-width: 768px) {
+        .header { flex-direction: row; align-items: center; justify-content: space-between; }
+    }
+
+    .brand {
+        display: flex;
+        align-items: center;
+        gap: 15px;
+    }
+    
+    .brand img { filter: invert(1); } /* Ensure logo is white if it's black */
+
+    .brand-text h1 { margin: 0; font-size: 24px; font-weight: 700; letter-spacing: -0.5px; }
+    .brand-text p { margin: 0; font-size: 13px; color: var(--text-muted); }
+
+    .controls {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+    }
+
+    /* --- Form Elements (Glass Style) --- */
+    input, select, button {
+        background: var(--glass);
+        border: 1px solid var(--glass-border);
+        color: var(--text-main);
+        padding: 10px 16px;
+        border-radius: 12px;
+        font-family: var(--font);
+        font-size: 14px;
+        transition: all 0.3s ease;
+        backdrop-filter: blur(10px);
+    }
+
+    input::placeholder { color: #555; }
+
+    input:focus, select:focus {
+        border-color: var(--glass-highlight);
+        background: rgba(255,255,255,0.05);
+    }
+
+    .search-input { min-width: 250px; }
+
+    button { cursor: pointer; }
+    button:hover { background: var(--glass-highlight); }
+
+    /* --- Grid System --- */
+    .grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+        gap: 20px;
+        animation: fadeIn 0.6s ease;
+    }
+
+    /* --- Game Card --- */
+    .card {
+        background: var(--card-bg);
+        border: 1px solid var(--glass-border);
+        border-radius: 16px;
+        overflow: hidden;
+        transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s;
+        display: flex;
+        flex-direction: column;
+        position: relative;
+    }
+
+    .card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        border-color: var(--glass-highlight);
+    }
+
+    .thumb {
+        width: 100%;
+        aspect-ratio: 16/9;
+        background: #111;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .thumb img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        transition: transform 0.5s ease;
+    }
+
+    .card:hover .thumb img { transform: scale(1.05); }
+
+    .card-content { padding: 15px; flex: 1; display: flex; flex-direction: column; gap: 10px; }
+
+    .card-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+    }
+
+    .game-name { font-weight: 600; font-size: 16px; margin-bottom: 4px; }
+    
+    .stats {
+        display: flex;
+        gap: 10px;
+        font-size: 12px;
+        color: var(--text-muted);
+    }
+    
+    .stat-chip { display: flex; align-items: center; gap: 5px; }
+
+    .actions {
+        margin-top: auto;
+        display: flex;
+        gap: 8px;
+    }
+
+    .play-btn {
+        flex: 1;
+        background: white;
+        color: black;
+        border: none;
+        font-weight: 600;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+    }
+    .play-btn:hover { background: #ddd; }
+
+    .fav-btn {
+        width: 40px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 16px;
+    }
+    .fav-btn.active { color: #ff4d4d; border-color: rgba(255, 77, 77, 0.3); background: rgba(255, 77, 77, 0.1); }
+
+    /* --- Skeleton Loading --- */
+    .skeleton-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 20px; }
+    .skeleton { background: var(--card-bg); border-radius: 16px; height: 280px; position: relative; overflow: hidden; }
+    .skeleton::after {
+        content: ""; position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+        background: linear-gradient(90deg, transparent, rgba(255,255,255,0.05), transparent);
+        animation: shimmer 1.5s infinite;
+    }
+
+    /* --- Modal / Player Overlay --- */
+    .modal-overlay {
+        position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+        background: rgba(0,0,0,0.8);
+        backdrop-filter: blur(15px);
+        z-index: 1000;
+        display: none;
+        opacity: 0;
+        transition: opacity 0.3s ease;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .modal-overlay.active { display: flex; opacity: 1; }
+
+    .modal-content {
+        width: 90vw;
+        height: 90vh;
+        background: #000;
+        border: 1px solid var(--glass-border);
+        border-radius: 20px;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+        box-shadow: 0 0 50px rgba(0,0,0,0.8);
+        transform: scale(0.95);
+        transition: transform 0.3s ease;
+    }
+
+    .modal-overlay.active .modal-content { transform: scale(1); }
+
+    .game-frame-container {
+        flex: 1;
+        position: relative;
+        background: #000;
+    }
+
+    iframe { width: 100%; height: 100%; border: none; }
+
+    .player-controls {
+        height: 60px;
+        background: #0a0a0a;
+        border-top: 1px solid var(--glass-border);
+        display: flex;
+        align-items: center;
+        padding: 0 20px;
+        justify-content: space-between;
+    }
+
+    .player-info { display: flex; align-items: center; gap: 15px; }
+    .player-info img { width: 32px; height: 32px; border-radius: 6px; object-fit: cover; }
+    .player-info h3 { font-size: 16px; margin: 0; font-weight: 500; }
+    
+    .player-actions { display: flex; gap: 10px; }
+
+    .close-btn { background: rgba(255,255,255,0.1); }
+    .close-btn:hover { background: rgba(255,50,50,0.2); color: #ff5555; border-color: #ff5555; }
+
+    .empty { width: 100%; text-align: center; padding: 50px; color: var(--text-muted); }
+
+    @keyframes shimmer { 0% { transform: translateX(-100%); } 100% { transform: translateX(100%); } }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+    <header class="header">
+        <div class="brand">
+            <img src="/branding/logo.png" height="40" width="40" alt="Logo" onerror="this.style.display='none'"> 
+            <i class="fa-solid fa-moon" style="font-size:24px; display:none;" id="fallbackIcon"></i>
+            <div class="brand-text">
+                <h1>Moonlight</h1>
+                <p>Play 150+ Games</p>
+            </div>
+        </div>
+
+        <div class="controls">
+            <input type="text" id="searchInput" class="search-input" placeholder="Search games or tags...">
+            <select id="sortSelect">
+                <option value="your_favorites">Your Favorites</option>
+                <option value="favorites">Most Favorited</option>
+                <option value="plays">Most Played</option>
+                <option value="alphabetical">Alphabetical</option>
+            </select>
+            <button id="refreshBtn" title="Refresh"><i class="fa-solid fa-rotate"></i></button>
+        </div>
+    </header>
+
+    <div id="contentArea">
+        <div class="skeleton-grid" id="skeletons">
+            <div class="skeleton"></div><div class="skeleton"></div><div class="skeleton"></div>
+            <div class="skeleton"></div><div class="skeleton"></div><div class="skeleton"></div>
+            <div class="skeleton"></div><div class="skeleton"></div><div class="skeleton"></div>
+            <div class="skeleton"></div><div class="skeleton"></div><div class="skeleton"></div>
+        </div>
+    </div>
+</div>
+
+<div class="modal-overlay" id="gameModal">
+    <div class="modal-content">
+        <div class="game-frame-container">
+            <iframe id="gameFrame" allowfullscreen></iframe>
+        </div>
+        <div class="player-controls">
+            <div class="player-info">
+                <img id="modalImg" src="" alt="">
+                <h3 id="modalTitle">Loading...</h3>
+            </div>
+            <div class="player-actions">
+                <button id="modalReload" title="Reload Game"><i class="fa-solid fa-rotate-right"></i></button>
+                <button id="modalFullscreen" title="Fullscreen"><i class="fa-solid fa-expand"></i></button>
+                <button class="close-btn" id="modalClose" title="Close"><i class="fa-solid fa-xmark"></i> Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script type="module">
+    // --- 1. Supabase Initialization ---
+    let supabase = null;
+    let _clientReady = false;
+    const _onClientReadyQueue = [];
+    
+    function onClientReady(cb){ if(_clientReady) cb(); else _onClientReadyQueue.push(cb); }
+
+    if (window.supabaseClient) {
+        supabase = window.supabaseClient;
+        _clientReady = true;
+    } else {
+        window.addEventListener('supabase-ready', (e)=>{
+            supabase = (e && e.detail && e.detail.client) || window.supabaseClient || null;
+            _clientReady = !!supabase;
+            while(_onClientReadyQueue.length) { 
+                const fn = _onClientReadyQueue.shift(); 
+                try{ fn(); }catch(e){console.error(e);} 
+            }
+        }, { once: true });
+    }
+
+    // --- 2. State & DOM ---
+    let games = [];
+    let filtered = [];
+    let userFavorites = []; 
+    let currentUserId = null;
+    let currentGameData = null; // Store current playing game
+
+    const contentArea = document.getElementById('contentArea');
+    const searchInput = document.getElementById('searchInput');
+    const sortSelect = document.getElementById('sortSelect');
+    const refreshBtn = document.getElementById('refreshBtn');
+    
+    // Modal Elements
+    const gameModal = document.getElementById('gameModal');
+    const gameFrame = document.getElementById('gameFrame');
+    const modalTitle = document.getElementById('modalTitle');
+    const modalImg = document.getElementById('modalImg');
+    const modalClose = document.getElementById('modalClose');
+    const modalReload = document.getElementById('modalReload');
+    const modalFullscreen = document.getElementById('modalFullscreen');
+
+    const initialSkeletonHtml = document.getElementById('skeletons') ? document.getElementById('skeletons').outerHTML : '';
+
+    // --- 3. Helpers ---
+    const delay = ms => new Promise(r => setTimeout(r, ms));
+    function ellipsize(str, n){ return str.length > n ? str.slice(0,n) + '...' : str; }
+    function debounce(func, timeout = 300) {
+        let timer;
+        return (...args) => {
+            clearTimeout(timer);
+            timer = setTimeout(() => { func.apply(this, args); }, timeout);
+        };
+    }
+
+    // --- 4. Data Loading ---
+    async function loadData(){
+        try {
+            contentArea.innerHTML = initialSkeletonHtml;
+            
+            // Allow mock run if supabase missing
+            if(!supabase) {
+                console.warn("Supabase not found. Waiting...");
+                await delay(2000); // Fake load
+                if(!supabase) {
+                    contentArea.innerHTML = `<div class="empty">Supabase client not connected.</div>`;
+                    return;
+                }
+            }
+
+            const fetchGames = supabase.from('games').select('id, name, img_url, url, plays, favorites, tags, html');
+            const sessionResp = await supabase.auth.getSession();
+            currentUserId = sessionResp.data.session?.user?.id || null;
+
+            const [gamesRes, favRes] = await Promise.all([
+                fetchGames,
+                currentUserId ? supabase.from('favorites').select('favorites').eq('id', currentUserId).single() : Promise.resolve({ data: null })
+            ]);
+
+            if (gamesRes.error) throw gamesRes.error;
+            games = (gamesRes.data || []).map(g => ({ ...g, id: g.id }));
+
+            userFavorites = (favRes && favRes.data && favRes.data.favorites) ? favRes.data.favorites : [];
+
+            await delay(1000); // Minimal aesthetic delay
+            
+            filtered = [...games];
+            applyFilters();
+
+        } catch (err) {
+            console.error('loadData error', err);
+            contentArea.innerHTML = `<div class="empty">Couldn't load games. Error connecting to database.</div>`;
+        }
+    }
+
+    // --- 5. Rendering ---
+    function renderGrid(){
+        if (!filtered || filtered.length === 0) {
+            contentArea.innerHTML = `<div class="empty">No games found.</div>`;
+            return;
+        }
+
+        const grid = document.createElement('div');
+        grid.className = 'grid';
+
+        filtered.forEach(game => {
+            const card = document.createElement('div');
+            card.className = 'card';
+            
+            const thumbUrl = game.img_url || `https://placehold.co/500x500/111/fff?text=${encodeURIComponent(game.name?.slice(0,1) || 'G')}`;
+            
+            const isFav = userFavorites.includes(game.id);
+
+            card.innerHTML = `
+                <div class="thumb"><img src="${thumbUrl}" loading="lazy" alt="${game.name}"></div>
+                <div class="card-content">
+                    <div class="card-header">
+                        <div class="game-name">${ellipsize(game.name || 'Untitled', 30)}</div>
+                    </div>
+                    <div class="stats">
+                        <div class="stat-chip"><i class="fa-solid fa-play"></i> <span id="plays-${game.id}">${game.plays ?? 0}</span></div>
+                        <div class="stat-chip" id="fav-count-container-${game.id}"><i class="fa-solid fa-heart"></i> <span id="favs-${game.id}">${game.favorites ?? 0}</span></div>
+                    </div>
+                    <div class="actions">
+                        <button class="play-btn" id="play-${game.id}"><i class="fa-solid fa-play"></i> Play</button>
+                        <button class="fav-btn ${isFav ? 'active' : ''}" id="fav-${game.id}">
+                            <i class="${isFav ? 'fa-solid' : 'fa-regular'} fa-heart"></i>
+                        </button>
+                    </div>
+                </div>
+            `;
+
+            grid.appendChild(card);
+
+            // Bind Events
+            card.querySelector(`#play-${game.id}`).onclick = () => handlePlayClick(game);
+            card.querySelector(`#fav-${game.id}`).onclick = (e) => toggleFavorite(game, e.currentTarget);
+        });
+
+        contentArea.innerHTML = '';
+        contentArea.appendChild(grid);
+    }
+
+    // --- 6. Logic: Search & Filter ---
+    function applyFilters(){
+        const q = searchInput.value.trim().toLowerCase();
+        filtered = games.filter(g => {
+            if (!q) return true;
+            const nameMatch = (g.name || '').toLowerCase().includes(q);
+            const tags = (g.tags || '') + ''; 
+            return nameMatch || tags.toLowerCase().includes(q);
+        });
+
+        const sort = sortSelect.value;
+        if (sort === 'plays') filtered.sort((a,b) => (b.plays||0) - (a.plays||0));
+        else if (sort === 'favorites') filtered.sort((a,b) => (b.favorites||0) - (a.favorites||0));
+        else if (sort === 'alphabetical') filtered.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+        else if (sort === 'your_favorites') {
+            filtered.sort((a,b) => {
+                const aFav = userFavorites.includes(a.id) ? 1 : 0;
+                const bFav = userFavorites.includes(b.id) ? 1 : 0;
+                if (aFav !== bFav) return bFav - aFav;
+                return (b.plays||0) - (a.plays||0);
+            });
+        }
+        renderGrid();
+    }
+
+    const debouncedApplyFilters = debounce(applyFilters, 300);
+
+    searchInput.addEventListener('input', () => {
+        // Optimistic skeleton for search feel
+        // contentArea.innerHTML = initialSkeletonHtml; 
+        // Or just filter immediately:
+        debouncedApplyFilters();
+    });
+
+    sortSelect.addEventListener('change', applyFilters);
+    refreshBtn.addEventListener('click', loadData);
+
+    // --- 7. Logic: Play Game (Modal) ---
+    async function handlePlayClick(game) {
+        // 1. Optimistic Play Count Update
+        const newPlays = (game.plays || 0) + 1;
+        game.plays = newPlays;
+        const playCountEl = document.getElementById(`plays-${game.id}`);
+        if(playCountEl) playCountEl.innerText = newPlays;
+
+        // 2. Open Modal
+        openGameModal(game);
+
+        // 3. Database Update
+        if (supabase) {
+            try {
+                await supabase.from('games').update({ plays: newPlays }).eq('id', game.id);
+            } catch(e) { console.error("Play count update failed", e); }
+        }
+    }
+
+    function openGameModal(game) {
+        currentGameData = game;
+        modalTitle.textContent = game.name;
+        modalImg.src = game.img_url || '';
+        
+        gameModal.classList.add('active');
+        document.body.style.overflow = 'hidden'; // Stop background scrolling
+
+        // Logic from play.js: HTML vs URL
+        if (game.html) {
+            console.log("Injecting raw HTML");
+            gameFrame.src = "about:blank";
+            setTimeout(() => {
+                const doc = gameFrame.contentWindow.document;
+                doc.open();
+                doc.write(game.html);
+                doc.close();
+            }, 50);
+        } else if (game.url) {
+            console.log("Loading URL:", game.url);
+            gameFrame.src = game.url;
+        } else {
+            gameFrame.src = "";
+            alert("No game content found.");
+        }
+    }
+
+    function closeGameModal() {
+        gameModal.classList.remove('active');
+        document.body.style.overflow = ''; 
+        gameFrame.src = ""; // Stop audio/gameplay
+        currentGameData = null;
+    }
+
+    // Modal Controls
+    modalClose.onclick = closeGameModal;
+    
+    modalReload.onclick = () => {
+        if (currentGameData && currentGameData.html) {
+            gameFrame.contentWindow.location.reload(); 
+            // Re-injection might be needed depending on browser implementation of reload on about:blank
+            // If simple reload fails for blobs, re-call openGameModal(currentGameData)
+            setTimeout(() => openGameModal(currentGameData), 100);
+        } else {
+            gameFrame.src = gameFrame.src;
+        }
+    };
+
+    modalFullscreen.onclick = () => {
+        if (gameFrame.requestFullscreen) gameFrame.requestFullscreen();
+        else if (gameFrame.webkitRequestFullscreen) gameFrame.webkitRequestFullscreen();
+    };
+
+    // Close on clicking outside modal content
+    gameModal.onclick = (e) => {
+        if(e.target === gameModal) closeGameModal();
+    }
+
+    // --- 8. Logic: Favorites ---
+    let favLock = new Set();
+    async function toggleFavorite(game, btn) {
+        if (!currentUserId) {
+            alert('Please sign in to favorite games.');
+            return;
+        }
+        if (favLock.has(game.id)) return;
+        favLock.add(game.id);
+
+        const currentlyFav = userFavorites.includes(game.id);
+        const icon = btn.querySelector('i');
+        const countSpan = document.getElementById(`favs-${game.id}`);
+
+        // Optimistic UI
+        if (currentlyFav) {
+            userFavorites = userFavorites.filter(id => id !== game.id);
+            btn.classList.remove('active');
+            icon.classList.replace('fa-solid', 'fa-regular');
+            game.favorites = Math.max((game.favorites || 0) - 1, 0);
+        } else {
+            userFavorites.push(game.id);
+            btn.classList.add('active');
+            icon.classList.replace('fa-regular', 'fa-solid');
+            game.favorites = (game.favorites || 0) + 1;
+        }
+        if(countSpan) countSpan.innerText = game.favorites;
+
+        try {
+            await supabase.from('favorites').upsert({ id: currentUserId, favorites: userFavorites });
+            await supabase.from('games').update({ favorites: game.favorites }).eq('id', game.id);
+        } catch (err) {
+            console.error('Fav error', err);
+            // Revert would go here (omitted for brevity)
+        } finally {
+            favLock.delete(game.id);
+        }
+    }
+
+    // --- 9. Bootstrap ---
+    onClientReady(async () => {
+        await loadData();
+        
+        // Listen for auth changes
+        supabase.auth.onAuthStateChange(async (event, session) => {
+            currentUserId = session?.user?.id || null;
+            if(currentUserId) {
+                // refresh favorites
+                const { data } = await supabase.from('favorites').select('favorites').eq('id', currentUserId).single();
+                userFavorites = data?.favorites || [];
+            } else {
+                userFavorites = [];
+            }
+            applyFilters();
+        });
+    });
+
+    // Handle missing logo
+    document.querySelector('.brand img').onerror = function() {
+        this.style.display = 'none';
+        document.getElementById('fallbackIcon').style.display = 'block';
+    }
+</script>
+</body>
+</html>
