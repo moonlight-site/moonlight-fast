@@ -36,7 +36,8 @@
 
     .brand { display: flex; align-items: center; gap: 15px; }
     .brand-text h1 { margin: 0; font-size: 24px; font-weight: 600; }
-    .brand-text p { margin: 0; font-size: 12px; color: var(--text-muted); text-transform: uppercase; }
+    /* Updated status text style */
+    .brand-text p { margin: 0; font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; font-weight: 500; }
 
     .controls { display: flex; gap: 10px; flex-wrap: wrap; }
 
@@ -54,9 +55,12 @@
         overflow: hidden; transition: 0.4s cubic-bezier(0.25, 0.8, 0.25, 1); display: flex; flex-direction: column;
     }
     .card:hover { transform: translateY(-8px); border-color: rgba(255,255,255,0.3); }
+    
+    /* REVERTED: Removed grayscale filter */
     .thumb { width: 100%; aspect-ratio: 16/9; background: #111; overflow: hidden; }
-    .thumb img { width: 100%; height: 100%; object-fit: cover; filter: grayscale(100%); transition: 0.6s; }
-    .card:hover .thumb img { filter: grayscale(0%); transform: scale(1.1); }
+    .thumb img { width: 100%; height: 100%; object-fit: cover; transition: 0.6s; }
+    .card:hover .thumb img { transform: scale(1.1); }
+    
     .card-content { padding: 15px; flex: 1; display: flex; flex-direction: column; gap: 8px; }
     .game-title { font-size: 16px; font-weight: 600; }
     .card-actions { margin-top: auto; display: flex; gap: 10px; }
@@ -73,6 +77,13 @@
     .game-container { flex: 1; background: #000; }
     iframe { width: 100%; height: 100%; border: none; }
     .modal-bar { height: 70px; background: #0a0a0a; border-top: 1px solid var(--glass-border); display: flex; align-items: center; justify-content: space-between; padding: 0 25px; }
+    
+    /* Icon Buttons for Modal */
+    .icon-btn { 
+        width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; 
+        border-radius: 50%; padding: 0; font-size: 18px;
+    }
+    .close-btn:hover { background: #ff4444 !important; color: white !important; border-color: #ff4444 !important; }
 
     /* Skeleton */
     .skeleton { background: var(--glass); height: 280px; border-radius: 16px; position: relative; overflow: hidden; }
@@ -88,7 +99,7 @@
             <i class="fa-solid fa-moon"></i>
             <div class="brand-text">
                 <h1>Moonlight</h1>
-                <p>One-Page Arcade</p>
+                <p id="statusText">Connecting...</p>
             </div>
         </div>
         <div class="controls">
@@ -112,9 +123,9 @@
         <div class="game-container"><iframe id="gameFrame" allowfullscreen sandbox="allow-scripts allow-same-origin allow-pointer-lock allow-forms"></iframe></div>
         <div class="modal-bar">
             <div class="modal-info"><h2 id="modalTitle" style="margin:0; font-size:18px;">Game Title</h2></div>
-            <div class="modal-controls">
-                <button id="modalReload">Reload</button>
-                <button id="modalClose" style="background:#ff3333; color:white; border:none;">Close</button>
+            <div class="modal-controls" style="display:flex; gap:10px;">
+                <button id="modalReload" class="icon-btn" title="Reload Game"><i class="fa-solid fa-rotate-right"></i></button>
+                <button id="modalClose" class="icon-btn close-btn" title="Close"><i class="fa-solid fa-xmark"></i></button>
             </div>
         </div>
     </div>
@@ -125,65 +136,107 @@
 
     let games = [];
     let supabase = null;
-    let userFavorites = [];
+    let fetchTime = null; // Store when data was fetched
 
     const contentArea = document.getElementById('contentArea');
     const searchInput = document.getElementById('searchInput');
     const sortSelect = document.getElementById('sortSelect');
     const gameModal = document.getElementById('gameModal');
     const gameFrame = document.getElementById('gameFrame');
+    const statusText = document.getElementById('statusText');
 
-    // --- 1. THE FIX: Supabase Client Creation ---
+    // --- 1. Supabase Client Creation ---
     function createAndDispatchClient() {
-        console.log("[SUPABASE] Running createAndDispatchClient...");
         try {
             const supabaseUrl = 'https://mrkhmlhrbtedudclwfli.supabase.co';
             const supabaseKey = 'sb_publishable_Ej0sVQdRrHnWnctlZxWI3g_djchZi4L';
             
             if (!window.supabase || typeof window.supabase.createClient !== 'function') {
-                console.error('[SUPABASE] Supabase UMD script not yet available in window object');
                 return false;
             }
             
             window.supabaseClient = window.supabase.createClient(supabaseUrl, supabaseKey);
-            console.log("[SUPABASE] Client created successfully.");
-            
-            // Dispatch the event that the rest of the app is listening for
             window.dispatchEvent(new CustomEvent('supabase-ready', { detail: { client: window.supabaseClient } }));
             return true;
         } catch (e) {
-            console.error('[SUPABASE] createAndDispatchClient error', e);
+            console.error('[SUPABASE] error', e);
             return false;
         }
     }
 
-    // --- 2. DATA LOADING ---
+    // --- 2. STATUS TEXT UPDATE LOGIC ---
+    function startStatusUpdater() {
+        // Run immediately
+        updateStatusText();
+        // Then run every minute
+        setInterval(updateStatusText, 60000);
+    }
+
+    function updateStatusText() {
+        if (!fetchTime) {
+            statusText.innerText = "WAITING FOR DATA...";
+            return;
+        }
+
+        const now = Date.now();
+        const diffMs = now - fetchTime;
+        const diffMins = Math.floor(diffMs / 60000);
+
+        if (diffMins < 1) {
+            statusText.innerText = "LAST UPDATED JUST NOW";
+        } else if (diffMins < 60) {
+            statusText.innerText = `UPDATED ${diffMins} MINUTE${diffMins === 1 ? '' : 'S'} AGO`;
+        } else {
+            const diffHours = Math.floor(diffMins / 60);
+            if (diffHours < 24) {
+                statusText.innerText = `UPDATED ${diffHours} HOUR${diffHours === 1 ? '' : 'S'} AGO`;
+            } else {
+                const diffDays = Math.floor(diffHours / 24);
+                statusText.innerText = `UPDATED ${diffDays} DAY${diffDays === 1 ? '' : 'S'} AGO`;
+            }
+        }
+    }
+
+    // --- 3. DATA LOADING ---
     async function loadData() {
-        console.log("[DATA] Fetching games from Supabase...");
-        if (!window.supabaseClient) {
-            console.error("[DATA] Cannot load: window.supabaseClient is null");
-            return;
-        }
+        if (!window.supabaseClient) return;
 
-        const { data, error } = await window.supabaseClient.from('games').select('*');
+        console.log("[DATA] Fetching games...");
+        // Added .range(0, 999) to ensure we get up to 1000 items
+        const { data, error } = await window.supabaseClient
+            .from('games')
+            .select('*')
+            .range(0, 999); 
+
         if (error) {
-            console.error("[DATA] Error fetching games:", error);
+            console.error("[DATA] Error:", error);
+            statusText.innerText = "ERROR LOADING DATA";
             return;
         }
 
-        console.log(`[DATA] Successfully loaded ${data.length} games.`);
+        console.log(`[DATA] Loaded ${data.length} games.`);
         games = data;
+        
+        // Update Time Logic
+        fetchTime = Date.now();
+        startStatusUpdater();
+
         renderGrid(games);
     }
 
-    // --- 3. UI RENDERING ---
+    // --- 4. UI RENDERING ---
     function renderGrid(data) {
         contentArea.innerHTML = '';
+        if(data.length === 0) {
+            contentArea.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:50px;">No games found.</div>';
+            return;
+        }
+
         data.forEach(game => {
             const card = document.createElement('div');
             card.className = 'card';
             card.innerHTML = `
-                <div class="thumb"><img src="${game.img_url || ''}" alt=""></div>
+                <div class="thumb"><img src="${game.img_url || ''}" alt="" loading="lazy"></div>
                 <div class="card-content">
                     <div class="game-title">${game.name}</div>
                     <div class="card-actions">
@@ -196,14 +249,12 @@
         });
     }
 
-    // --- 4. GAME MODAL LOGIC ---
+    // --- 5. GAME MODAL LOGIC ---
     function openGame(game) {
-        console.log(`[ACTION] Opening ${game.name}`);
         document.getElementById('modalTitle').textContent = game.name;
         gameModal.classList.add('active');
         
         if (game.html) {
-            console.log("[LOAD] Injecting Raw HTML");
             gameFrame.src = 'about:blank';
             setTimeout(() => {
                 const doc = gameFrame.contentWindow.document;
@@ -212,31 +263,34 @@
                 doc.close();
             }, 50);
         } else {
-            console.log(`[LOAD] Loading URL: ${game.url}`);
             gameFrame.src = game.url;
         }
     }
 
+    // Close Button Logic
     document.getElementById('modalClose').onclick = () => {
         gameModal.classList.remove('active');
         gameFrame.src = '';
     };
+    
+    // Reload Button Logic
+    document.getElementById('modalReload').onclick = () => {
+        const currentSrc = gameFrame.src;
+        // Simple reload trick for iframes
+        gameFrame.src = ''; 
+        setTimeout(() => { gameFrame.src = currentSrc; }, 10);
+    };
 
-    // --- 5. INITIALIZATION SEQUENCE ---
+    // --- 6. INITIALIZATION SEQUENCE ---
     window.addEventListener('supabase-ready', (e) => {
-        console.log("[EVENT] supabase-ready caught.");
         supabase = e.detail.client;
         loadData();
     });
 
-    // Try to init Supabase immediately
     const checkSupabaseExist = setInterval(() => {
         if (window.supabase) {
-            console.log("[SYSTEM] window.supabase found, initializing client...");
             createAndDispatchClient();
             clearInterval(checkSupabaseExist);
-        } else {
-            console.log("[SYSTEM] Waiting for Supabase UMD script to load...");
         }
     }, 100);
 
@@ -247,7 +301,10 @@
         renderGrid(filtered);
     };
 
-    document.getElementById('refreshBtn').onclick = () => location.reload();
+    document.getElementById('refreshBtn').onclick = () => {
+        contentArea.innerHTML = '<div class="skeleton"></div><div class="skeleton"></div><div class="skeleton"></div>';
+        loadData();
+    };
 
 </script>
 </body>
