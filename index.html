@@ -283,7 +283,7 @@
         renderGrid(games.filter(g => g.name.toLowerCase().includes(term)));
     };
 
-    document.getElementById('refreshBtn').onclick = () => location.reload();
+    document.getElementById('refreshBtn').onclick = () => loadData();
 
     window.addEventListener('supabase-ready', loadData);
     const checkSup = setInterval(() => { if(window.supabase) { initSupabase(); clearInterval(checkSup); } }, 100);
