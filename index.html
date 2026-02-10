@@ -3,262 +3,81 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>moonlight - games</title>
+<title>Moonlight Arcade</title>
 
-<link rel="icon" href="https://cdn.jsdelivr.net/gh/moonlight-site/moonlight-site.github.io/branding/favicon.png" type="image/x-icon">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 
 <style>
-    /* --- THEME CONFIGURATION --- */
     :root {
-        --bg-color: #050505;
-        --glass-bg: rgba(255, 255, 255, 0.03);
+        --bg: #050505;
+        --glass: rgba(255, 255, 255, 0.03);
         --glass-border: rgba(255, 255, 255, 0.1);
-        --glass-highlight: rgba(255, 255, 255, 0.2);
         --text-main: #ffffff;
         --text-muted: #888888;
-        --font-main: 'Inter Tight', sans-serif;
-        --card-radius: 16px;
+        --font: 'Inter Tight', sans-serif;
     }
 
-    /* --- RESET & BASE --- */
     * { box-sizing: border-box; outline: none; }
-    
-    body {
-        margin: 0;
-        background-color: var(--bg-color);
-        color: var(--text-main);
-        font-family: var(--font-main);
-        overflow-x: hidden; /* Prevent horizontal scroll */
-        min-height: 100vh;
-    }
+    body { margin: 0; background: var(--bg); color: var(--text-main); font-family: var(--font); overflow-x: hidden; min-height: 100vh; }
 
-    /* --- LAYOUT --- */
-    .wrap {
-        max-width: 1400px;
-        margin: 0 auto;
-        padding: 30px;
-    }
+    .wrap { max-width: 1400px; margin: 0 auto; padding: 30px; }
 
-    /* --- HEADER (Glassmorphic) --- */
+    /* Glassmorphic Header */
     .header {
-        display: flex;
-        flex-direction: column;
-        gap: 20px;
-        padding: 20px;
-        margin-bottom: 40px;
-        background: var(--glass-bg);
-        border: 1px solid var(--glass-border);
-        border-radius: 20px;
-        backdrop-filter: blur(12px);
-        -webkit-backdrop-filter: blur(12px);
-        box-shadow: 0 4px 30px rgba(0, 0, 0, 0.5);
+        display: flex; flex-direction: column; gap: 20px; padding: 20px; margin-bottom: 40px;
+        background: var(--glass); border: 1px solid var(--glass-border); border-radius: 20px;
+        backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
     }
-
-    @media(min-width: 768px) {
-        .header { flex-direction: row; align-items: center; justify-content: space-between; }
-    }
+    @media(min-width: 768px) { .header { flex-direction: row; align-items: center; justify-content: space-between; } }
 
     .brand { display: flex; align-items: center; gap: 15px; }
-    .brand i { font-size: 28px; color: white; text-shadow: 0 0 10px rgba(255,255,255,0.5); }
-    .brand-text h1 { margin: 0; font-size: 24px; font-weight: 600; letter-spacing: -0.5px; }
-    .brand-text p { margin: 0; font-size: 12px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; }
+    .brand-text h1 { margin: 0; font-size: 24px; font-weight: 600; }
+    .brand-text p { margin: 0; font-size: 12px; color: var(--text-muted); text-transform: uppercase; }
 
     .controls { display: flex; gap: 10px; flex-wrap: wrap; }
 
-    /* --- INPUTS & BUTTONS --- */
     input, select, button {
-        background: rgba(255,255,255,0.05);
-        border: 1px solid var(--glass-border);
-        color: white;
-        padding: 12px 20px;
-        border-radius: 12px;
-        font-family: var(--font-main);
-        font-size: 14px;
-        transition: all 0.3s ease;
+        background: rgba(255,255,255,0.05); border: 1px solid var(--glass-border);
+        color: white; padding: 12px 20px; border-radius: 12px; font-family: var(--font);
     }
+    button { cursor: pointer; transition: 0.3s; }
+    button:hover { background: white; color: black; }
 
-    input:focus, select:focus {
-        border-color: var(--text-main);
-        background: rgba(255,255,255,0.1);
-        box-shadow: 0 0 15px rgba(255,255,255,0.1);
-    }
-
-    button { cursor: pointer; }
-    button:hover { background: var(--text-main); color: black; }
-
-    .search-input { width: 100%; max-width: 300px; }
-
-    /* --- GAME GRID --- */
-    .grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-        gap: 25px;
-        padding-bottom: 50px;
-    }
-
-    /* --- GAME CARD --- */
+    /* Grid & Cards */
+    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 25px; }
     .card {
-        background: var(--glass-bg);
-        border: 1px solid var(--glass-border);
-        border-radius: var(--card-radius);
-        overflow: hidden;
-        transition: transform 0.4s cubic-bezier(0.25, 0.8, 0.25, 1), box-shadow 0.4s ease;
-        position: relative;
-        display: flex;
-        flex-direction: column;
+        background: var(--glass); border: 1px solid var(--glass-border); border-radius: 16px;
+        overflow: hidden; transition: 0.4s cubic-bezier(0.25, 0.8, 0.25, 1); display: flex; flex-direction: column;
     }
-
-    .card:hover {
-        transform: translateY(-8px) scale(1.02);
-        box-shadow: 0 20px 40px rgba(0,0,0,0.6);
-        border-color: var(--glass-highlight);
-        z-index: 2;
-    }
-
-    .thumb {
-        width: 100%;
-        aspect-ratio: 16/9;
-        background: #111;
-        overflow: hidden;
-        position: relative;
-    }
-
-    .thumb img {
-        width: 100%;
-        height: 100%;
-        object-fit: cover;
-        transition: transform 0.6s ease;
-        filter: grayscale(100%); /* B&W aesthetic */
-    }
-
-    .card:hover .thumb img {
-        transform: scale(1.1);
-        filter: grayscale(0%); /* Color on hover */
-    }
-
+    .card:hover { transform: translateY(-8px); border-color: rgba(255,255,255,0.3); }
+    .thumb { width: 100%; aspect-ratio: 16/9; background: #111; overflow: hidden; }
+    .thumb img { width: 100%; height: 100%; object-fit: cover; filter: grayscale(100%); transition: 0.6s; }
+    .card:hover .thumb img { filter: grayscale(0%); transform: scale(1.1); }
     .card-content { padding: 15px; flex: 1; display: flex; flex-direction: column; gap: 8px; }
+    .game-title { font-size: 16px; font-weight: 600; }
+    .card-actions { margin-top: auto; display: flex; gap: 10px; }
+    .play-btn { flex: 1; background: white; color: black; font-weight: 700; border: none; display: flex; align-items: center; justify-content: center; gap: 8px; }
 
-    .game-title { font-size: 16px; font-weight: 600; color: white; }
-    
-    .game-stats {
-        display: flex;
-        gap: 12px;
-        font-size: 12px;
-        color: var(--text-muted);
-        margin-bottom: 10px;
-    }
-
-    .card-actions {
-        margin-top: auto;
-        display: flex;
-        gap: 10px;
-    }
-
-    .play-btn {
-        flex: 1;
-        background: white;
-        color: black;
-        font-weight: 700;
-        border: none;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: 8px;
-    }
-    .play-btn:hover { background: #ccc; }
-
-    .fav-btn {
-        width: 42px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 16px;
-    }
-    .fav-btn.active { color: white; background: rgba(255,255,255,0.2); border-color: white; }
-
-    /* --- MODAL (The "Play" Page) --- */
+    /* Modal Overlay */
     .modal-overlay {
-        position: fixed;
-        top: 0; left: 0; width: 100%; height: 100%;
-        background: rgba(0,0,0,0.9);
-        backdrop-filter: blur(20px);
-        z-index: 9999;
-        display: none;
-        opacity: 0;
-        transition: opacity 0.3s ease;
-        align-items: center;
-        justify-content: center;
+        position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+        background: rgba(0,0,0,0.9); backdrop-filter: blur(20px);
+        z-index: 9999; display: none; opacity: 0; transition: 0.3s; align-items: center; justify-content: center;
     }
-
     .modal-overlay.active { display: flex; opacity: 1; }
-
-    .modal-window {
-        width: 95vw;
-        height: 90vh;
-        background: #000;
-        border: 1px solid var(--glass-border);
-        border-radius: 20px;
-        display: flex;
-        flex-direction: column;
-        overflow: hidden;
-        transform: scale(0.9);
-        transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-        box-shadow: 0 0 100px rgba(255,255,255,0.1);
-    }
-
-    .modal-overlay.active .modal-window { transform: scale(1); }
-
-    .game-container {
-        flex: 1;
-        position: relative;
-        background: #050505;
-    }
-
+    .modal-window { width: 95vw; height: 90vh; background: #000; border: 1px solid var(--glass-border); border-radius: 20px; display: flex; flex-direction: column; overflow: hidden; }
+    .game-container { flex: 1; background: #000; }
     iframe { width: 100%; height: 100%; border: none; }
+    .modal-bar { height: 70px; background: #0a0a0a; border-top: 1px solid var(--glass-border); display: flex; align-items: center; justify-content: space-between; padding: 0 25px; }
 
-    .modal-bar {
-        height: 70px;
-        background: #0a0a0a;
-        border-top: 1px solid var(--glass-border);
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        padding: 0 25px;
-    }
-
-    .modal-info { display: flex; align-items: center; gap: 15px; }
-    .modal-info img { width: 40px; height: 40px; border-radius: 8px; object-fit: cover; }
-    .modal-info h2 { font-size: 18px; font-weight: 600; margin: 0; }
-
-    .modal-controls { display: flex; gap: 10px; }
-    
-    .modal-btn {
-        width: 40px; height: 40px;
-        padding: 0;
-        display: flex; align-items: center; justify-content: center;
-        border-radius: 50%;
-    }
-    
-    .close-btn { 
-        border-radius: 12px; 
-        width: auto; 
-        padding: 0 20px; 
-        background: rgba(255,255,255,0.1); 
-    }
-    .close-btn:hover { background: #ff3333; border-color: #ff3333; color: white; }
-
-    /* --- SKELETON LOADING --- */
-    .skeleton { background: var(--glass-bg); height: 280px; border-radius: 16px; position: relative; overflow: hidden; }
-    .skeleton::after {
-        content: ""; position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-        background: linear-gradient(90deg, transparent, rgba(255,255,255,0.05), transparent);
-        animation: shimmer 1.5s infinite;
-    }
+    /* Skeleton */
+    .skeleton { background: var(--glass); height: 280px; border-radius: 16px; position: relative; overflow: hidden; }
+    .skeleton::after { content: ""; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: linear-gradient(90deg, transparent, rgba(255,255,255,0.05), transparent); animation: shimmer 1.5s infinite; }
     @keyframes shimmer { 0% { transform: translateX(-100%); } 100% { transform: translateX(100%); } }
-
 </style>
 </head>
 <body>
@@ -269,400 +88,166 @@
             <i class="fa-solid fa-moon"></i>
             <div class="brand-text">
                 <h1>Moonlight</h1>
-                <p>Arcade System</p>
+                <p>One-Page Arcade</p>
             </div>
         </div>
-
         <div class="controls">
-            <input type="text" id="searchInput" class="search-input" placeholder="Search games...">
+            <input type="text" id="searchInput" placeholder="Search games...">
             <select id="sortSelect">
                 <option value="default">Sort by...</option>
                 <option value="alphabetical">A-Z</option>
                 <option value="plays">Most Played</option>
-                <option value="favorites">Favorites</option>
             </select>
-            <button id="refreshBtn" title="Reload Database"><i class="fa-solid fa-rotate"></i></button>
+            <button id="refreshBtn"><i class="fa-solid fa-rotate"></i> Refresh</button>
         </div>
     </header>
 
     <div id="contentArea" class="grid">
-        <div class="skeleton"></div><div class="skeleton"></div><div class="skeleton"></div>
-        <div class="skeleton"></div><div class="skeleton"></div><div class="skeleton"></div>
         <div class="skeleton"></div><div class="skeleton"></div><div class="skeleton"></div>
     </div>
 </div>
 
 <div class="modal-overlay" id="gameModal">
     <div class="modal-window">
-        <div class="game-container">
-            <iframe id="gameFrame" allowfullscreen sandbox="allow-scripts allow-same-origin allow-pointer-lock allow-forms"></iframe>
-        </div>
+        <div class="game-container"><iframe id="gameFrame" allowfullscreen sandbox="allow-scripts allow-same-origin allow-pointer-lock allow-forms"></iframe></div>
         <div class="modal-bar">
-            <div class="modal-info">
-                <img id="modalImg" src="" alt="">
-                <h2 id="modalTitle">Game Title</h2>
-            </div>
+            <div class="modal-info"><h2 id="modalTitle" style="margin:0; font-size:18px;">Game Title</h2></div>
             <div class="modal-controls">
-                <button class="modal-btn" id="modalReload" title="Reload"><i class="fa-solid fa-rotate-right"></i></button>
-                <button class="modal-btn" id="modalFullscreen" title="Fullscreen"><i class="fa-solid fa-expand"></i></button>
-                <button class="close-btn" id="modalClose"><i class="fa-solid fa-xmark"></i> Close</button>
+                <button id="modalReload">Reload</button>
+                <button id="modalClose" style="background:#ff3333; color:white; border:none;">Close</button>
             </div>
         </div>
     </div>
 </div>
 
 <script type="module">
-    console.log("-----------------------------------------");
-    console.log("SYSTEM START: Initializing Moonlight Arcade");
-    console.log("-----------------------------------------");
+    console.log("[SYSTEM] Starting Moonlight Arcade...");
 
-    // --- GLOBAL VARIABLES ---
     let games = [];
-    let filteredGames = [];
-    let userFavorites = [];
     let supabase = null;
-    let currentUserId = null;
-    let currentGame = null; // Holds the object of the game currently in the modal
+    let userFavorites = [];
 
-    // --- DOM ELEMENTS ---
     const contentArea = document.getElementById('contentArea');
     const searchInput = document.getElementById('searchInput');
     const sortSelect = document.getElementById('sortSelect');
-    const refreshBtn = document.getElementById('refreshBtn');
-    
-    // Modal Elements
     const gameModal = document.getElementById('gameModal');
     const gameFrame = document.getElementById('gameFrame');
-    const modalTitle = document.getElementById('modalTitle');
-    const modalImg = document.getElementById('modalImg');
-    const modalClose = document.getElementById('modalClose');
-    const modalReload = document.getElementById('modalReload');
-    const modalFullscreen = document.getElementById('modalFullscreen');
 
-    // Save initial skeleton HTML for reuse during refresh
-    const initialSkeletonHtml = contentArea.innerHTML;
-
-    // --- 1. SUPABASE CONNECTION ---
-    async function initSupabase() {
-        console.log("STEP 1: Checking for Supabase Client...");
-        
-        // Check if chip.js or another script injected supabaseClient into window
-        if (window.supabaseClient) {
-            console.log("SUCCESS: window.supabaseClient found.");
-            supabase = window.supabaseClient;
-            return true;
-        } 
-        
-        // Wait briefly in case it's async loading (simulating the logic from your uploaded files)
-        console.log("WAITING: Giving window.supabaseClient 1s to load...");
-        await new Promise(r => setTimeout(r, 1000));
-
-        if (window.supabaseClient) {
-            console.log("SUCCESS: window.supabaseClient found after wait.");
-            supabase = window.supabaseClient;
-            return true;
-        }
-
-        console.warn("WARNING: Supabase client NOT found. Ensure 'chip.js' is loaded.");
-        console.warn("FALLBACK: Using MOCK DATA for demonstration purposes.");
-        return false;
-    }
-
-    // --- 2. DATA FETCHING ---
-    async function loadData() {
-        console.log("STEP 2: Loading Data...");
-        contentArea.innerHTML = initialSkeletonHtml; // Show skeletons
-
-        const hasSupabase = await initSupabase();
-
-        if (hasSupabase) {
-            try {
-                // Get Session
-                const sessionRes = await supabase.auth.getSession();
-                currentUserId = sessionRes.data.session?.user?.id;
-                console.log("AUTH: User ID:", currentUserId || "Guest");
-
-                // Get Games
-                console.log("DB: Fetching 'games' table...");
-                const { data: gamesData, error: gamesError } = await supabase
-                    .from('games')
-                    .select('*');
-
-                if (gamesError) throw gamesError;
-                console.log(`DB: Fetched ${gamesData.length} games.`);
-                games = gamesData;
-
-                // Get Favorites
-                if (currentUserId) {
-                    console.log("DB: Fetching favorites...");
-                    const { data: favData } = await supabase
-                        .from('favorites')
-                        .select('favorites')
-                        .eq('id', currentUserId)
-                        .single();
-                    userFavorites = favData?.favorites || [];
-                    console.log("DB: Favorites loaded:", userFavorites);
-                }
-
-            } catch (err) {
-                console.error("ERROR: Failed to load data from Supabase:", err);
-                renderError("Failed to connect to database.");
-                return;
+    // --- 1. THE FIX: Supabase Client Creation ---
+    function createAndDispatchClient() {
+        console.log("[SUPABASE] Running createAndDispatchClient...");
+        try {
+            const supabaseUrl = 'https://mrkhmlhrbtedudclwfli.supabase.co';
+            const supabaseKey = 'sb_publishable_Ej0sVQdRrHnWnctlZxWI3g_djchZi4L';
+            
+            if (!window.supabase || typeof window.supabase.createClient !== 'function') {
+                console.error('[SUPABASE] Supabase UMD script not yet available in window object');
+                return false;
             }
-        } else {
-            // MOCK DATA (If no Supabase)
-            console.log("MOCK: Generating dummy games...");
-            games = generateMockGames();
+            
+            window.supabaseClient = window.supabase.createClient(supabaseUrl, supabaseKey);
+            console.log("[SUPABASE] Client created successfully.");
+            
+            // Dispatch the event that the rest of the app is listening for
+            window.dispatchEvent(new CustomEvent('supabase-ready', { detail: { client: window.supabaseClient } }));
+            return true;
+        } catch (e) {
+            console.error('[SUPABASE] createAndDispatchClient error', e);
+            return false;
         }
-
-        // Initial Render
-        filteredGames = [...games];
-        renderGrid();
     }
 
-    // --- 3. RENDERING UI ---
-    function renderGrid() {
-        console.log(`STEP 3: Rendering Grid with ${filteredGames.length} items.`);
-        contentArea.innerHTML = '';
-
-        if (filteredGames.length === 0) {
-            contentArea.innerHTML = `<div style="grid-column: 1/-1; text-align:center; padding:50px; color:#666;">No games found.</div>`;
+    // --- 2. DATA LOADING ---
+    async function loadData() {
+        console.log("[DATA] Fetching games from Supabase...");
+        if (!window.supabaseClient) {
+            console.error("[DATA] Cannot load: window.supabaseClient is null");
             return;
         }
 
-        filteredGames.forEach(game => {
+        const { data, error } = await window.supabaseClient.from('games').select('*');
+        if (error) {
+            console.error("[DATA] Error fetching games:", error);
+            return;
+        }
+
+        console.log(`[DATA] Successfully loaded ${data.length} games.`);
+        games = data;
+        renderGrid(games);
+    }
+
+    // --- 3. UI RENDERING ---
+    function renderGrid(data) {
+        contentArea.innerHTML = '';
+        data.forEach(game => {
             const card = document.createElement('div');
             card.className = 'card';
-            
-            // Handle Images (Fallback if missing)
-            const imgUrl = game.img_url || 'https://placehold.co/600x400/111/fff?text=No+Image';
-            const isFav = userFavorites.includes(game.id);
-
             card.innerHTML = `
-                <div class="thumb">
-                    <img src="${imgUrl}" alt="${game.name}" loading="lazy">
-                </div>
+                <div class="thumb"><img src="${game.img_url || ''}" alt=""></div>
                 <div class="card-content">
                     <div class="game-title">${game.name}</div>
-                    <div class="game-stats">
-                        <span><i class="fa-solid fa-play"></i> ${game.plays || 0}</span>
-                        <span><i class="fa-solid fa-heart"></i> <span id="fav-count-${game.id}">${game.favorites || 0}</span></span>
-                    </div>
                     <div class="card-actions">
-                        <button class="play-btn" data-id="${game.id}">
-                            <i class="fa-solid fa-play"></i> Play
-                        </button>
-                        <button class="fav-btn ${isFav ? 'active' : ''}" data-id="${game.id}">
-                            <i class="${isFav ? 'fa-solid' : 'fa-regular'} fa-heart"></i>
-                        </button>
+                        <button class="play-btn"><i class="fa-solid fa-play"></i> Play</button>
                     </div>
                 </div>
             `;
-
-            // Append to DOM
+            card.querySelector('.play-btn').onclick = () => openGame(game);
             contentArea.appendChild(card);
-
-            // Add Event Listeners immediately
-            const playBtn = card.querySelector('.play-btn');
-            const favBtn = card.querySelector('.fav-btn');
-
-            playBtn.addEventListener('click', () => {
-                console.log(`ACTION: Play clicked for '${game.name}' (ID: ${game.id})`);
-                openGameModal(game);
-            });
-
-            favBtn.addEventListener('click', (e) => {
-                handleFavorite(game, e.currentTarget);
-            });
         });
     }
 
-    // --- 4. GAMEPLAY LOGIC (Merged from play.js) ---
-    function openGameModal(game) {
-        console.log("STEP 4: Opening Game Modal");
-        currentGame = game;
-
-        // UI Updates
-        modalTitle.textContent = game.name;
-        modalImg.src = game.img_url || '';
+    // --- 4. GAME MODAL LOGIC ---
+    function openGame(game) {
+        console.log(`[ACTION] Opening ${game.name}`);
+        document.getElementById('modalTitle').textContent = game.name;
         gameModal.classList.add('active');
-        document.body.style.overflow = 'hidden'; // Lock scrolling
-
-        // Logic from your play.js: HTML vs URL
-        console.log("GAME LOAD: Checking content type...");
-
+        
         if (game.html) {
-            console.log("GAME LOAD: Type = RAW HTML");
-            console.log("GAME LOAD: Injecting HTML into iframe...");
-            
-            // Reset iframe
+            console.log("[LOAD] Injecting Raw HTML");
             gameFrame.src = 'about:blank';
-            
             setTimeout(() => {
                 const doc = gameFrame.contentWindow.document;
                 doc.open();
                 doc.write(game.html);
                 doc.close();
-                console.log("GAME LOAD: Injection complete.");
-            }, 50); // Small delay to ensure about:blank is ready
-
-        } else if (game.url) {
-            console.log(`GAME LOAD: Type = URL (${game.url})`);
-            gameFrame.src = game.url;
+            }, 50);
         } else {
-            console.error("GAME LOAD: No HTML or URL found in game object.");
-            gameFrame.src = "";
-            alert("Error: No game content found.");
+            console.log(`[LOAD] Loading URL: ${game.url}`);
+            gameFrame.src = game.url;
         }
-
-        // Increment Play Count (Optimistic)
-        incrementPlayCount(game);
     }
 
-    function closeGameModal() {
-        console.log("ACTION: Closing Modal");
+    document.getElementById('modalClose').onclick = () => {
         gameModal.classList.remove('active');
-        document.body.style.overflow = ''; 
-        gameFrame.src = ""; // Kill the iframe process/audio
-        currentGame = null;
-    }
+        gameFrame.src = '';
+    };
 
-    async function incrementPlayCount(game) {
-        // Update UI immediately
-        game.plays = (game.plays || 0) + 1;
-        
-        // Update DB if connected
-        if (supabase) {
-            console.log(`DB: Updating play count for ${game.id}...`);
-            await supabase.from('games').update({ plays: game.plays }).eq('id', game.id);
-        }
-    }
-
-    // --- 5. SEARCH & FILTER LOGIC ---
-    function applyFilters() {
-        const query = searchInput.value.toLowerCase().trim();
-        const sortType = sortSelect.value;
-        console.log(`FILTER: Query='${query}', Sort='${sortType}'`);
-
-        // Filter
-        filteredGames = games.filter(g => {
-            const nameMatch = g.name.toLowerCase().includes(query);
-            const tagMatch = g.tags && g.tags.toLowerCase().includes(query);
-            return nameMatch || tagMatch;
-        });
-
-        // Sort
-        if (sortType === 'alphabetical') {
-            filteredGames.sort((a, b) => a.name.localeCompare(b.name));
-        } else if (sortType === 'plays') {
-            filteredGames.sort((a, b) => (b.plays || 0) - (a.plays || 0));
-        } else if (sortType === 'favorites') {
-            filteredGames.sort((a, b) => (b.favorites || 0) - (a.favorites || 0));
-        }
-
-        renderGrid();
-    }
-
-    // Debounce Search
-    let debounceTimer;
-    searchInput.addEventListener('input', () => {
-        clearTimeout(debounceTimer);
-        debounceTimer = setTimeout(() => {
-            console.log("EVENT: Search input settled");
-            applyFilters();
-        }, 300);
-    });
-
-    sortSelect.addEventListener('change', () => {
-        console.log("EVENT: Sort changed");
-        applyFilters();
-    });
-
-    refreshBtn.addEventListener('click', () => {
-        console.log("EVENT: Refresh clicked");
-        searchInput.value = '';
+    // --- 5. INITIALIZATION SEQUENCE ---
+    window.addEventListener('supabase-ready', (e) => {
+        console.log("[EVENT] supabase-ready caught.");
+        supabase = e.detail.client;
         loadData();
     });
 
-    // --- 6. FAVORITES LOGIC ---
-    async function handleFavorite(game, btnElement) {
-        if (!supabase) {
-            alert("This feature requires a database connection.");
-            return;
-        }
-        if (!currentUserId) {
-            alert("Please login to use favorites.");
-            return;
-        }
-
-        const icon = btnElement.querySelector('i');
-        const countSpan = document.getElementById(`fav-count-${game.id}`);
-        const isFav = userFavorites.includes(game.id);
-
-        console.log(`ACTION: Toggle favorite for ${game.id}. Currently fav? ${isFav}`);
-
-        if (isFav) {
-            // Remove
-            userFavorites = userFavorites.filter(id => id !== game.id);
-            btnElement.classList.remove('active');
-            icon.classList.replace('fa-solid', 'fa-regular');
-            game.favorites = Math.max(0, (game.favorites || 0) - 1);
+    // Try to init Supabase immediately
+    const checkSupabaseExist = setInterval(() => {
+        if (window.supabase) {
+            console.log("[SYSTEM] window.supabase found, initializing client...");
+            createAndDispatchClient();
+            clearInterval(checkSupabaseExist);
         } else {
-            // Add
-            userFavorites.push(game.id);
-            btnElement.classList.add('active');
-            icon.classList.replace('fa-regular', 'fa-solid');
-            game.favorites = (game.favorites || 0) + 1;
+            console.log("[SYSTEM] Waiting for Supabase UMD script to load...");
         }
+    }, 100);
 
-        // Update UI Number
-        if(countSpan) countSpan.innerText = game.favorites;
+    // Search Logic
+    searchInput.oninput = (e) => {
+        const term = e.target.value.toLowerCase();
+        const filtered = games.filter(g => g.name.toLowerCase().includes(term));
+        renderGrid(filtered);
+    };
 
-        // DB Update
-        try {
-            await supabase.from('favorites').upsert({ id: currentUserId, favorites: userFavorites });
-            await supabase.from('games').update({ favorites: game.favorites }).eq('id', game.id);
-            console.log("DB: Favorites synced.");
-        } catch (err) {
-            console.error("DB ERROR: Could not sync favorite:", err);
-        }
-    }
-
-    // --- 7. MODAL CONTROLS ---
-    modalClose.addEventListener('click', closeGameModal);
-    
-    // Close if clicking outside the box
-    gameModal.addEventListener('click', (e) => {
-        if (e.target === gameModal) closeGameModal();
-    });
-
-    modalReload.addEventListener('click', () => {
-        console.log("ACTION: Reloading Game Frame");
-        if(currentGame) openGameModal(currentGame);
-    });
-
-    modalFullscreen.addEventListener('click', () => {
-        console.log("ACTION: Requesting Fullscreen");
-        if (gameFrame.requestFullscreen) gameFrame.requestFullscreen();
-    });
-
-    // --- 8. UTILS & MOCKS ---
-    function renderError(msg) {
-        contentArea.innerHTML = `<div style="text-align:center; padding:40px; color:#ff4444;">${msg}</div>`;
-    }
-
-    function generateMockGames() {
-        return [
-            { id: 1, name: "Neon Snake", plays: 120, favorites: 45, url: "https://patorjk.com/games/snake/" },
-            { id: 2, name: "Retro Tetris", plays: 340, favorites: 80, url: "https://chvin.github.io/react-tetris/" },
-            { id: 3, name: "2048", plays: 890, favorites: 120, url: "https://play2048.co/" },
-            { id: 4, name: "Hextris", plays: 55, favorites: 12, url: "https://hextris.io/" },
-            { id: 5, name: "HTML5 Asteroids", plays: 22, favorites: 5, url: "https://www.masswerk.at/flyer/flyer/" }
-        ];
-    }
-
-    // --- INIT ---
-    window.addEventListener('load', loadData);
+    document.getElementById('refreshBtn').onclick = () => location.reload();
 
 </script>
 </body>
