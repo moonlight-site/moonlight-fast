@@ -113,7 +113,7 @@
 <div class="popup-overlay" id="missionPopup">
     <div class="popup-content">
         <h2>Welcome</h2>
-        <p>We believe gaming shouldn't have boundaries. Internet censorship is a relic of the past, and we’re here to break through it. Whether you're at school, work, or anywhere in between, Moonlight provides the unblocked access you deserve. Our library is small, but growing every day-stay tuned, the best is yet to come.</p>
+        <p>We believe gaming shouldn't have boundaries. Internet censorship is a relic of the past, and we’re here to break through it. Whether you're at school, work, or anywhere in between, Moonlight provides the unblocked access you deserve. Our library is small, but growing every day—stay tuned, the best is yet to come.</p>
         <button class="continue-btn" id="closePopup">Continue</button>
     </div>
 </div>
@@ -127,11 +127,7 @@
             </div>
         </div>
         <div class="controls">
-            <input type="text" id="searchInput" placeholder="Search library...">
-            <select hidden id="sortSelect">
-                <option value="default">Default</option>
-                <option value="alphabetical">A-Z</option>
-            </select>
+            <input type="text" id="searchInput" placeholder="Search by name or tag...">
             <button id="refreshBtn"><i class="fa-solid fa-rotate"></i></button>
         </div>
     </header>
@@ -144,11 +140,14 @@
 
 <div class="modal-overlay" id="gameModal">
     <div class="modal-window">
-        <div class="game-container"><iframe id="gameFrame" allowfullscreen sandbox="allow-scripts allow-same-origin allow-pointer-lock allow-forms"></iframe></div>
+        <div class="game-container" id="gameContainer">
+            <iframe id="gameFrame" allowfullscreen sandbox="allow-scripts allow-same-origin allow-pointer-lock allow-forms"></iframe>
+        </div>
         <div class="modal-bar">
             <div class="modal-info"><h2 id="modalTitle" style="margin:0; font-size:18px;">Game Title</h2></div>
             <div class="modal-controls" style="display:flex; gap:10px;">
                 <button id="modalReload" class="icon-btn" title="Reload"><i class="fa-solid fa-rotate-right"></i></button>
+                <button id="modalFullscreen" class="icon-btn" title="Fullscreen"><i class="fa-solid fa-expand"></i></button>
                 <button id="modalClose" class="icon-btn close-btn" title="Close"><i class="fa-solid fa-xmark"></i></button>
             </div>
         </div>
@@ -169,11 +168,8 @@
 
     // Handle Popup Logic
     window.addEventListener('load', () => {
-        // Only show if user hasn't seen it before
         if (!localStorage.getItem('missionSeen')) {
-            setTimeout(() => {
-                missionPopup.classList.add('show');
-            }, 500);
+            setTimeout(() => { missionPopup.classList.add('show'); }, 500);
         }
     });
 
@@ -223,13 +219,23 @@
     }
 
     async function loadData() {
+        // Show loading state on button
+        const btnIcon = document.querySelector('#refreshBtn i');
+        if(btnIcon) btnIcon.classList.add('fa-spin');
+
         const { data, error } = await window.supabaseClient.from('games').select('*').range(0, 999);
-        if (error) return console.error(error);
-        games = data;
-        fetchTime = Date.now();
-        updateStatus();
-        setInterval(updateStatus, 60000);
-        renderGrid(games);
+        
+        if (error) {
+            console.error(error);
+        } else {
+            // SORT A-Z by default
+            games = data.sort((a, b) => a.name.localeCompare(b.name));
+            fetchTime = Date.now();
+            updateStatus();
+            renderGrid(games);
+        }
+        
+        if(btnIcon) btnIcon.classList.remove('fa-spin');
     }
 
     function renderGrid(data) {
@@ -275,16 +281,46 @@
         }, 50);
     }
 
+    // Modal Events
     document.getElementById('modalClose').onclick = () => { gameModal.classList.remove('active'); gameFrame.src = ''; };
     document.getElementById('modalReload').onclick = () => { if(currentGame) openGame(currentGame); };
     
-    document.getElementById('searchInput').oninput = (e) => {
-        const term = e.target.value.toLowerCase();
-        renderGrid(games.filter(g => g.name.toLowerCase().includes(term)));
+    // Fullscreen Logic
+    document.getElementById('modalFullscreen').onclick = () => {
+        const container = document.getElementById('gameContainer');
+        if (!document.fullscreenElement) {
+            container.requestFullscreen().catch(err => {
+                alert(`Error attempting to enable fullscreen: ${err.message}`);
+            });
+        } else {
+            document.exitFullscreen();
+        }
     };
 
-    document.getElementById('refreshBtn').onclick = () => loadData();
+    // SEARCH LOGIC: Filters by Name AND Tags
+    document.getElementById('searchInput').oninput = (e) => {
+        const term = e.target.value.toLowerCase();
+        
+        const filtered = games.filter(g => {
+            const inName = g.name.toLowerCase().includes(term);
+            // Check tags (ensure 'tags' exists and is an array first)
+            const inTags = g.tags && Array.isArray(g.tags) && g.tags.some(t => t.toLowerCase().includes(term));
+            return inName || inTags;
+        });
 
+        renderGrid(filtered);
+    };
+
+    // REFRESH BUTTON (Does not reload page, just fetches data)
+    document.getElementById('refreshBtn').onclick = () => {
+        document.getElementById('searchInput').value = ''; // Clear search
+        loadData();
+    };
+
+    // Status Timer
+    setInterval(updateStatus, 60000);
+
+    // Init Logic
     window.addEventListener('supabase-ready', loadData);
     const checkSup = setInterval(() => { if(window.supabase) { initSupabase(); clearInterval(checkSup); } }, 100);
 
