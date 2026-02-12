@@ -96,6 +96,8 @@
         padding: 40px; border-radius: 24px; max-width: 500px; width: 90%;
         transform: scale(0.9); transition: 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
         box-shadow: 0 0 60px rgba(255, 255, 255, 0.2);
+        max-height: 90vh;
+        overflow-y: auto;
     }
     .settings-overlay.show .settings-content { transform: scale(1); }
 
@@ -216,11 +218,15 @@
             <label class="settings-label">Tab Cloak</label>
             <select id="cloakSelect" class="settings-input">
                 <option value="default">Default (Moonlight)</option>
-                <option value="google">Google Drive</option>
-                <option value="classroom">Google Classroom</option>
-                <option value="discord">Discord</option>
-                <option value="notion">Notion</option>
-                <option value="calculator">Calculator</option>
+                <option value="google">Google</option>
+                <option value="gcalculator">Google Calculator</option>
+                <option value="gdrive">Google Drive</option>
+                <option value="gdocs">Google Docs</option>
+                <option value="gsheets">Google Sheets</option>
+                <option value="gslides">Google Slides</option>
+                <option value="gassign">Google Assignments</option>
+                <option value="desmos">Desmos Calculator</option>
+                <option value="transparent">Transparent</option>
                 <option value="custom">Custom</option>
             </select>
         </div>
@@ -323,31 +329,49 @@
     const customFaviconGroup = document.getElementById('customFaviconGroup');
     const refreshBtn = document.getElementById('refreshBtn');
 
+    const CLOAK_BASE_URL = 'https://cdn.jsdelivr.net/gh/moonlight-site/moonlight-site.github.io/uploads/cloaks/';
+
     // Tab Cloak Presets
     const CLOAK_PRESETS = {
         default: {
             title: 'moonlight - games',
-            favicon: 'https://cdn-icons-png.flaticon.com/512/1175/1175544.png'
+            favicon: 'https://cdn.jsdelivr.net/gh/moonlight-site/moonlight-site.github.io/branding/favicon.png'
         },
         google: {
+            title: 'Google',
+            favicon: CLOAK_BASE_URL + 'google.png'
+        },
+        gcalculator: {
+            title: 'Calculator - Google Search',
+            favicon: CLOAK_BASE_URL + 'google.png'
+        },
+        gdrive: {
             title: 'Google Drive',
-            favicon: 'https://ssl.gstatic.com/images/branding/product/1x/drive_2020q4_32dp.png'
+            favicon: CLOAK_BASE_URL + 'gdrive.png'
         },
-        classroom: {
-            title: 'Google Classroom',
-            favicon: 'https://ssl.gstatic.com/images/branding/product/1x/classroom_2020q4_32dp.png'
+        gdocs: {
+            title: 'Google Docs',
+            favicon: CLOAK_BASE_URL + 'gdocs.png'
         },
-        discord: {
-            title: 'Discord',
-            favicon: 'https://discord.com/assets/847541504914fd33810e70a0ea73177e.ico'
+        gsheets: {
+            title: 'Google Sheets',
+            favicon: CLOAK_BASE_URL + 'gsheets.png'
         },
-        notion: {
-            title: 'Notion',
-            favicon: 'https://www.notion.so/favicon.ico'
+        gslides: {
+            title: 'Google Slides',
+            favicon: CLOAK_BASE_URL + 'gslides.png'
         },
-        calculator: {
-            title: 'Calculator',
-            favicon: 'https://www.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=http://google.com/calculator&size=32'
+        gassign: {
+            title: 'Google Assignments',
+            favicon: CLOAK_BASE_URL + 'gassign.png'
+        },
+        desmos: {
+            title: 'Desmos | Scientific Calculator',
+            favicon: CLOAK_BASE_URL + 'desmos.png'
+        },
+        transparent: {
+            title: 'Transparent',
+            favicon: CLOAK_BASE_URL + 'transparent.png'
         }
     };
 
@@ -477,7 +501,6 @@
             window.supabaseClient = window.supabase.createClient(url, key);
             supabaseReady = true;
             console.log('Supabase initialized');
-            // NOW initialize online tracking
             initOnlineTracking();
             loadData();
         }
@@ -521,7 +544,6 @@
         console.log('Initializing online tracking with user ID:', userId);
 
         try {
-            // Insert user session
             const { data, error } = await window.supabaseClient
                 .from('online_users')
                 .insert([{
@@ -536,10 +558,8 @@
                 console.log('User inserted successfully');
             }
 
-            // Fetch initial count
             await fetchOnlineCount();
 
-            // Setup realtime subscription
             realtimeSubscription = window.supabaseClient
                 .channel('online_users')
                 .on('postgres_changes', {
@@ -554,7 +574,6 @@
                     console.log('Realtime subscription status:', status);
                 });
 
-            // Update last_seen every 30 seconds
             setInterval(() => {
                 window.supabaseClient
                     .from('online_users')
@@ -714,7 +733,7 @@
     // Status Timer
     setInterval(updateStatus, 60000);
 
-    // Init Supabase - this is the key fix!
+    // Init Supabase
     const checkSup = setInterval(() => { 
         if(window.supabase) { 
             initSupabase(); 
