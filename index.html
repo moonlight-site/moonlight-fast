@@ -31,6 +31,7 @@
         display: flex; flex-direction: column; gap: 20px; padding: 20px; margin-bottom: 40px;
         background: var(--glass); border: 1px solid var(--glass-border); border-radius: 20px;
         backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+        box-shadow: 0 0 40px rgba(255, 255, 255, 0.08);
     }
     @media(min-width: 768px) { .header { flex-direction: row; align-items: center; justify-content: space-between; } }
 
@@ -47,6 +48,14 @@
     button { cursor: pointer; transition: 0.3s; }
     button:hover { background: white; color: black; }
 
+    #settingsBtn, #refreshBtn {
+        transition: 0.3s all;
+    }
+
+    #settingsBtn:hover, #refreshBtn:hover {
+        box-shadow: 0 0 30px rgba(255, 255, 255, 0.3), inset 0 0 20px rgba(255, 255, 255, 0.1);
+    }
+
     /* Mission Popup Styles */
     .popup-overlay {
         position: fixed; top: 0; left: 0; width: 100%; height: 100%;
@@ -60,6 +69,7 @@
         background: #0a0a0a; border: 1px solid var(--glass-border);
         padding: 40px; border-radius: 24px; max-width: 500px; width: 90%;
         text-align: center; transform: scale(0.9); transition: 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        box-shadow: 0 0 60px rgba(255, 255, 255, 0.2);
     }
     .popup-overlay.show .popup-content { transform: scale(1); }
     
@@ -67,13 +77,56 @@
     .popup-content p { color: var(--text-muted); line-height: 1.6; font-size: 16px; margin-bottom: 30px; }
     .continue-btn { width: 100%; padding: 15px; font-weight: 700; font-size: 16px; }
 
+    /* Settings Popup Styles */
+    .settings-overlay {
+        position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+        background: rgba(0,0,0,0.8); backdrop-filter: blur(8px);
+        z-index: 9999; display: flex; align-items: center; justify-content: center;
+        opacity: 0; visibility: hidden; transition: 0.4s;
+    }
+    .settings-overlay.show { opacity: 1; visibility: visible; }
+
+    .settings-content {
+        background: #0a0a0a; border: 1px solid var(--glass-border);
+        padding: 40px; border-radius: 24px; max-width: 500px; width: 90%;
+        transform: scale(0.9); transition: 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        box-shadow: 0 0 60px rgba(255, 255, 255, 0.2);
+    }
+    .settings-overlay.show .settings-content { transform: scale(1); }
+
+    .settings-content h2 { margin-top: 0; font-size: 28px; font-weight: 700; margin-bottom: 30px; }
+    .settings-group { margin-bottom: 25px; }
+    .settings-label { display: block; font-size: 14px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; font-weight: 500; margin-bottom: 10px; }
+    .settings-input { width: 100%; padding: 12px 15px; background: rgba(255,255,255,0.05); border: 1px solid var(--glass-border); border-radius: 12px; color: white; font-family: var(--font); font-size: 14px; }
+    .settings-input:focus { border-color: rgba(255,255,255,0.3); background: rgba(255,255,255,0.08); }
+
+    .settings-group.hidden { display: none; }
+
+    /* Toggle Switch */
+    .toggle-container { display: flex; align-items: center; gap: 15px; }
+    .toggle-switch { position: relative; width: 50px; height: 28px; background: rgba(255,255,255,0.1); border-radius: 14px; cursor: pointer; border: 1px solid var(--glass-border); transition: 0.3s; }
+    .toggle-switch.active { background: #22c55e; border-color: #22c55e; }
+    .toggle-slider { position: absolute; top: 3px; left: 3px; width: 22px; height: 22px; background: white; border-radius: 50%; transition: 0.3s; }
+    .toggle-switch.active .toggle-slider { left: 25px; }
+    .toggle-label { font-size: 14px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; font-weight: 500; }
+
+    .settings-buttons { display: flex; gap: 10px; margin-top: 30px; }
+    .settings-btn { flex: 1; padding: 12px; border-radius: 12px; border: none; font-weight: 600; cursor: pointer; transition: 0.3s; font-family: var(--font); }
+    .settings-btn.close { background: rgba(255,255,255,0.05); color: white; border: 1px solid var(--glass-border); }
+    .settings-btn.close:hover { background: white; color: black; }
+
     /* Grid & Cards */
     .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 25px; }
     .card {
         background: var(--glass); border: 1px solid var(--glass-border); border-radius: 16px;
         overflow: hidden; transition: 0.4s cubic-bezier(0.25, 0.8, 0.25, 1); display: flex; flex-direction: column;
+        box-shadow: 0 0 30px rgba(255, 255, 255, 0.1);
     }
-    .card:hover { transform: translateY(-8px); border-color: rgba(255,255,255,0.3); }
+    .card:hover { 
+        transform: translateY(-8px); 
+        border-color: rgba(255,255,255,0.3);
+        box-shadow: 0 0 50px rgba(255, 255, 255, 0.25);
+    }
     
     .thumb { width: 100%; aspect-ratio: 16/9; background: #111; overflow: hidden; }
     .thumb img { width: 100%; height: 100%; object-fit: cover; transition: 0.6s; }
@@ -88,23 +141,55 @@
     .modal-overlay {
         position: fixed; top: 0; left: 0; width: 100%; height: 100%;
         background: rgba(0,0,0,0.9); backdrop-filter: blur(20px);
-        z-index: 9999; display: none; opacity: 0; transition: 0.3s; align-items: center; justify-content: center;
+        z-index: 9998; display: none; opacity: 0; transition: 0.3s; align-items: center; justify-content: center;
     }
     .modal-overlay.active { display: flex; opacity: 1; }
-    .modal-window { width: 95vw; height: 90vh; background: #000; border: 1px solid var(--glass-border); border-radius: 20px; display: flex; flex-direction: column; overflow: hidden; }
-    .game-container { flex: 1; background: #000; }
-    iframe { width: 100%; height: 100%; border: none; }
+    .modal-window { 
+        width: 95vw; height: 90vh; background: #000; border: 1px solid var(--glass-border); 
+        border-radius: 20px; display: flex; flex-direction: column; overflow: hidden;
+        box-shadow: 0 0 80px rgba(255, 255, 255, 0.25);
+    }
+    .game-container { flex: 1; background: #000; position: relative; }
+    iframe { width: 100%; height: 100%; border: none; opacity: 0; transition: opacity 0.3s; position: relative; z-index: 2; }
+    iframe.loaded { opacity: 1; }
     .modal-bar { height: 70px; background: #0a0a0a; border-top: 1px solid var(--glass-border); display: flex; align-items: center; justify-content: space-between; padding: 0 25px; }
     
     .icon-btn { 
         width: 45px; height: 45px; display: flex; align-items: center; justify-content: center; 
         border-radius: 12px; padding: 0; font-size: 20px; background: rgba(255,255,255,0.05);
+        transition: 0.3s all;
+        border: 1px solid rgba(255,255,255,0.1);
     }
-    .close-btn:hover { background: #ff3333 !important; color: white !important; border-color: #ff3333 !important; }
+    .icon-btn:hover {
+        box-shadow: 0 0 20px rgba(255, 255, 255, 0.3);
+        border-color: rgba(255,255,255,0.3);
+    }
+    .close-btn:hover { background: #ff3333 !important; color: white !important; border-color: #ff3333 !important; box-shadow: 0 0 25px rgba(255, 51, 51, 0.5) !important; }
+
+    /* Skeleton Loader */
+    .skeleton-loader {
+        position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+        background: linear-gradient(
+            135deg,
+            #1a1a1a 0%,
+            #2a2a2a 25%,
+            #1a1a1a 50%,
+            #2a2a2a 75%,
+            #1a1a1a 100%
+        );
+        background-size: 200% 200%;
+        animation: skeletonShimmer 3s ease-in-out forwards;
+        z-index: 3;
+    }
+    @keyframes skeletonShimmer {
+        0% { background-position: 0% 0%; }
+        100% { background-position: 200% 200%; }
+    }
+    .skeleton-loader.hidden { display: none; z-index: 0; }
 
     /* Skeleton */
-    .skeleton { background: var(--glass); height: 280px; border-radius: 16px; position: relative; overflow: hidden; }
-    .skeleton::after { content: ""; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: linear-gradient(90deg, transparent, rgba(255,255,255,0.05), transparent); animation: shimmer 1.5s infinite; }
+    .skeleton { background: var(--glass); height: 280px; border-radius: 16px; position: relative; overflow: hidden; box-shadow: 0 0 20px rgba(255, 255, 255, 0.08); }
+    .skeleton::after { content: ""; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: linear-gradient(90deg, transparent, rgba(255,255,255,0.05), transparent); animation: shimmer 2s infinite; }
     @keyframes shimmer { 0% { transform: translateX(-100%); } 100% { transform: translateX(100%); } }
 </style>
 </head>
@@ -113,8 +198,51 @@
 <div class="popup-overlay" id="missionPopup">
     <div class="popup-content">
         <h2>Welcome</h2>
-        <p>We believe gaming shouldn't have boundaries. Internet censorship is a relic of the past, and we’re here to break through it. Whether you're at school, work, or anywhere in between, Moonlight provides the unblocked access you deserve. Our library is small, but growing every day—stay tuned, the best is yet to come.</p>
+        <p>We believe gaming shouldn't have boundaries. Internet censorship is a relic of the past, and we're here to break through it. Whether you're at school, work, or anywhere in between, Moonlight keeps your gaming private and secure.</p>
         <button class="continue-btn" id="closePopup">Continue</button>
+    </div>
+</div>
+
+<div class="settings-overlay" id="settingsPopup">
+    <div class="settings-content">
+        <h2>Settings</h2>
+        
+        <div class="settings-group">
+            <label class="settings-label">Tab Cloak</label>
+            <select id="cloakSelect" class="settings-input">
+                <option value="default">Default (Moonlight)</option>
+                <option value="google">Google Drive</option>
+                <option value="classroom">Google Classroom</option>
+                <option value="discord">Discord</option>
+                <option value="notion">Notion</option>
+                <option value="calculator">Calculator</option>
+                <option value="custom">Custom</option>
+            </select>
+        </div>
+
+        <div class="settings-group hidden" id="customTitleGroup">
+            <label class="settings-label">Tab Title</label>
+            <input type="text" id="tabTitle" class="settings-input" placeholder="Enter tab title...">
+        </div>
+
+        <div class="settings-group hidden" id="customFaviconGroup">
+            <label class="settings-label">Favicon URL</label>
+            <input type="text" id="faviconUrl" class="settings-input" placeholder="Enter favicon URL...">
+        </div>
+
+        <div class="settings-group">
+            <label class="settings-label">Anti Tab Close</label>
+            <div class="toggle-container">
+                <div class="toggle-switch" id="antiCloseToggle">
+                    <div class="toggle-slider"></div>
+                </div>
+                <span class="toggle-label">Show close confirmation</span>
+            </div>
+        </div>
+
+        <div class="settings-buttons">
+            <button class="settings-btn close" id="closeSettings">Close</button>
+        </div>
     </div>
 </div>
 
@@ -129,6 +257,7 @@
         <div class="controls">
             <input type="text" id="searchInput" placeholder="Search by name or tag...">
             <button id="refreshBtn"><i class="fa-solid fa-rotate"></i></button>
+            <button id="settingsBtn"><i class="fa-solid fa-gear"></i></button>
         </div>
     </header>
 
@@ -141,6 +270,7 @@
 <div class="modal-overlay" id="gameModal">
     <div class="modal-window">
         <div class="game-container" id="gameContainer">
+            <div class="skeleton-loader" id="skeletonLoader"></div>
             <iframe id="gameFrame" allowfullscreen sandbox="allow-scripts allow-same-origin allow-pointer-lock allow-forms"></iframe>
         </div>
         <div class="modal-bar">
@@ -158,15 +288,56 @@
     let games = [];
     let fetchTime = null;
     let currentGame = null;
+    let antiCloseEnabled = false;
+    let skeletonTimeout = null;
 
     const contentArea = document.getElementById('contentArea');
     const statusText = document.getElementById('statusText');
     const gameModal = document.getElementById('gameModal');
     const gameFrame = document.getElementById('gameFrame');
+    const skeletonLoader = document.getElementById('skeletonLoader');
     const missionPopup = document.getElementById('missionPopup');
     const closePopupBtn = document.getElementById('closePopup');
+    const settingsPopup = document.getElementById('settingsPopup');
+    const settingsBtn = document.getElementById('settingsBtn');
+    const closeSettingsBtn = document.getElementById('closeSettings');
+    const cloakSelect = document.getElementById('cloakSelect');
+    const tabTitleInput = document.getElementById('tabTitle');
+    const faviconUrlInput = document.getElementById('faviconUrl');
+    const antiCloseToggle = document.getElementById('antiCloseToggle');
+    const customTitleGroup = document.getElementById('customTitleGroup');
+    const customFaviconGroup = document.getElementById('customFaviconGroup');
+    const refreshBtn = document.getElementById('refreshBtn');
 
-    // Handle Popup Logic
+    // Tab Cloak Presets
+    const CLOAK_PRESETS = {
+        default: {
+            title: 'moonlight - games',
+            favicon: 'https://cdn-icons-png.flaticon.com/512/1175/1175544.png'
+        },
+        google: {
+            title: 'Google Drive',
+            favicon: 'https://ssl.gstatic.com/images/branding/product/1x/drive_2020q4_32dp.png'
+        },
+        classroom: {
+            title: 'Google Classroom',
+            favicon: 'https://ssl.gstatic.com/images/branding/product/1x/classroom_2020q4_32dp.png'
+        },
+        discord: {
+            title: 'Discord',
+            favicon: 'https://discord.com/assets/847541504914fd33810e70a0ea73177e.ico'
+        },
+        notion: {
+            title: 'Notion',
+            favicon: 'https://www.notion.so/favicon.ico'
+        },
+        calculator: {
+            title: 'Calculator',
+            favicon: 'https://www.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=http://google.com/calculator&size=32'
+        }
+    };
+
+    // Handle Mission Popup
     window.addEventListener('load', () => {
         if (!localStorage.getItem('missionSeen')) {
             setTimeout(() => { missionPopup.classList.add('show'); }, 500);
@@ -178,6 +349,81 @@
         localStorage.setItem('missionSeen', 'true');
     };
 
+    // Settings Button
+    settingsBtn.onclick = () => {
+        settingsPopup.classList.add('show');
+    };
+
+    closeSettingsBtn.onclick = () => {
+        settingsPopup.classList.remove('show');
+    };
+
+    // Close settings when clicking outside
+    settingsPopup.onclick = (e) => {
+        if (e.target === settingsPopup) {
+            settingsPopup.classList.remove('show');
+        }
+    };
+
+    // Tab Cloak Selection
+    cloakSelect.onchange = (e) => {
+        const isCustom = e.target.value === 'custom';
+        customTitleGroup.classList.toggle('hidden', !isCustom);
+        customFaviconGroup.classList.toggle('hidden', !isCustom);
+
+        const preset = CLOAK_PRESETS[e.target.value];
+        if (preset) {
+            tabTitleInput.value = preset.title;
+            faviconUrlInput.value = preset.favicon;
+            applyTabCloak(preset.title, preset.favicon);
+        }
+    };
+
+    // Tab Title Change
+    tabTitleInput.onchange = () => {
+        applyTabCloak(tabTitleInput.value, faviconUrlInput.value);
+    };
+
+    // Favicon URL Change
+    faviconUrlInput.onchange = () => {
+        applyTabCloak(tabTitleInput.value, faviconUrlInput.value);
+    };
+
+    // Apply Tab Cloak
+    function applyTabCloak(title, faviconUrl) {
+        document.title = title;
+        
+        // Remove existing favicon
+        let favicon = document.querySelector('link[rel="icon"]');
+        if (favicon) {
+            favicon.remove();
+        }
+
+        // Add new favicon if URL provided
+        if (faviconUrl) {
+            const newFavicon = document.createElement('link');
+            newFavicon.rel = 'icon';
+            newFavicon.href = faviconUrl;
+            document.head.appendChild(newFavicon);
+        }
+    }
+
+    // Anti Tab Close Toggle
+    antiCloseToggle.onclick = () => {
+        antiCloseToggle.classList.toggle('active');
+        antiCloseEnabled = antiCloseToggle.classList.contains('active');
+        
+        if (antiCloseEnabled) {
+            window.onbeforeunload = (e) => {
+                e.preventDefault();
+                e.returnValue = '';
+                return '';
+            };
+        } else {
+            window.onbeforeunload = null;
+        }
+    };
+
     // --- FALLBACK HTML ---
     const FALLBACK_HTML = `
         <!DOCTYPE html>
@@ -185,7 +431,7 @@
         <head>
             <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
             <style>
-                body { background: #050505; color: #fff; font-family: 'Inter Tight', sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; margin: 0; text-align: center; }
+                body { background: #050505; color: #fff; font-family: 'Inter Tight', sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; margin: 0; }
                 .container { max-width: 400px; padding: 20px; }
                 i { font-size: 50px; color: #ffcc00; margin-bottom: 20px; }
                 h1 { margin: 10px 0; font-size: 24px; font-weight: 600; }
@@ -223,6 +469,9 @@
         const btnIcon = document.querySelector('#refreshBtn i');
         if(btnIcon) btnIcon.classList.add('fa-spin');
 
+        // Show skeleton loaders
+        showMenuSkeletons();
+
         const { data, error } = await window.supabaseClient.from('games').select('*').range(0, 999);
         
         if (error) {
@@ -236,6 +485,15 @@
         }
         
         if(btnIcon) btnIcon.classList.remove('fa-spin');
+    }
+
+    function showMenuSkeletons() {
+        contentArea.innerHTML = '';
+        for (let i = 0; i < 6; i++) {
+            const skeleton = document.createElement('div');
+            skeleton.className = 'skeleton';
+            contentArea.appendChild(skeleton);
+        }
     }
 
     function renderGrid(data) {
@@ -255,10 +513,27 @@
         });
     }
 
+    function showSkeletonLoader() {
+        // Clear any existing timeout
+        if (skeletonTimeout) clearTimeout(skeletonTimeout);
+        
+        // Show skeleton loader
+        skeletonLoader.classList.remove('hidden');
+        gameFrame.classList.remove('loaded');
+        
+        // Hide skeleton and show iframe after 3 seconds
+        skeletonTimeout = setTimeout(() => {
+            skeletonLoader.classList.add('hidden');
+            gameFrame.classList.add('loaded');
+        }, 3000);
+    }
+
     function openGame(game) {
         currentGame = game;
         document.getElementById('modalTitle').textContent = game.name;
         gameModal.classList.add('active');
+        
+        showSkeletonLoader();
         
         const isUrlBroken = (game.url && game.url.startsWith('/'));
         
@@ -282,8 +557,18 @@
     }
 
     // Modal Events
-    document.getElementById('modalClose').onclick = () => { gameModal.classList.remove('active'); gameFrame.src = ''; };
-    document.getElementById('modalReload').onclick = () => { if(currentGame) openGame(currentGame); };
+    document.getElementById('modalClose').onclick = () => { 
+        gameModal.classList.remove('active'); 
+        gameFrame.src = '';
+        if (skeletonTimeout) clearTimeout(skeletonTimeout);
+    };
+    
+    document.getElementById('modalReload').onclick = () => { 
+        if(currentGame) {
+            showSkeletonLoader();
+            openGame(currentGame);
+        }
+    };
     
     // Fullscreen Logic
     document.getElementById('modalFullscreen').onclick = () => {
@@ -312,7 +597,7 @@
     };
 
     // REFRESH BUTTON (Does not reload page, just fetches data)
-    document.getElementById('refreshBtn').onclick = () => {
+    refreshBtn.onclick = () => {
         document.getElementById('searchInput').value = ''; // Clear search
         loadData();
     };
