@@ -219,7 +219,7 @@
             <select id="cloakSelect" class="settings-input">
                 <option value="default">Default (Moonlight)</option>
                 <option value="google">Google</option>
-                <option value="gcalculator">Google Calculator</option>
+                <option value="gcalc">Google Calculator</option>
                 <option value="gdrive">Google Drive</option>
                 <option value="gdocs">Google Docs</option>
                 <option value="gsheets">Google Sheets</option>
@@ -341,7 +341,7 @@
             title: 'Google',
             favicon: CLOAK_BASE_URL + 'google.png'
         },
-        gcalculator: {
+        gcalc: {
             title: 'Calculator - Google Search',
             favicon: CLOAK_BASE_URL + 'google.png'
         },
@@ -366,14 +366,43 @@
             favicon: CLOAK_BASE_URL + 'gassign.png'
         },
         desmos: {
-            title: 'Desmos | Scientific Calculator',
+            title: 'Desmos Calculator',
             favicon: CLOAK_BASE_URL + 'desmos.png'
         },
         transparent: {
-            title: '‌‌‌‌‌‌‌‌',
+            title: '‌‌‌',
             favicon: CLOAK_BASE_URL + 'transparent.png'
         }
     };
+
+    // Load saved cloak preference on page load
+    function loadSavedCloak() {
+        const savedCloak = localStorage.getItem('moonlight_cloak');
+        const savedTitle = localStorage.getItem('moonlight_cloak_title');
+        const savedFavicon = localStorage.getItem('moonlight_cloak_favicon');
+        
+        if (savedCloak && CLOAK_PRESETS[savedCloak]) {
+            cloakSelect.value = savedCloak;
+            const preset = CLOAK_PRESETS[savedCloak];
+            applyTabCloak(preset.title, preset.favicon);
+        } else if (savedTitle && savedFavicon) {
+            // Load custom cloak if it was set
+            cloakSelect.value = 'custom';
+            customTitleGroup.classList.remove('hidden');
+            customFaviconGroup.classList.remove('hidden');
+            tabTitleInput.value = savedTitle;
+            faviconUrlInput.value = savedFavicon;
+            applyTabCloak(savedTitle, savedFavicon);
+        } else {
+            // Default cloak - save it to localStorage
+            cloakSelect.value = 'default';
+            const preset = CLOAK_PRESETS['default'];
+            applyTabCloak(preset.title, preset.favicon);
+            localStorage.setItem('moonlight_cloak', 'default');
+            localStorage.setItem('moonlight_cloak_title', preset.title);
+            localStorage.setItem('moonlight_cloak_favicon', preset.favicon);
+        }
+    }
 
     // Generate unique user ID
     function generateUserId() {
@@ -390,6 +419,7 @@
         if (!localStorage.getItem('missionSeen')) {
             setTimeout(() => { missionPopup.classList.add('show'); }, 500);
         }
+        loadSavedCloak();
     });
 
     closePopupBtn.onclick = () => {
@@ -424,17 +454,28 @@
             tabTitleInput.value = preset.title;
             faviconUrlInput.value = preset.favicon;
             applyTabCloak(preset.title, preset.favicon);
+            
+            // Save the cloak preference
+            localStorage.setItem('moonlight_cloak', e.target.value);
+            localStorage.setItem('moonlight_cloak_title', preset.title);
+            localStorage.setItem('moonlight_cloak_favicon', preset.favicon);
         }
     };
 
     // Tab Title Change
     tabTitleInput.onchange = () => {
         applyTabCloak(tabTitleInput.value, faviconUrlInput.value);
+        localStorage.setItem('moonlight_cloak', 'custom');
+        localStorage.setItem('moonlight_cloak_title', tabTitleInput.value);
+        localStorage.setItem('moonlight_cloak_favicon', faviconUrlInput.value);
     };
 
     // Favicon URL Change
     faviconUrlInput.onchange = () => {
         applyTabCloak(tabTitleInput.value, faviconUrlInput.value);
+        localStorage.setItem('moonlight_cloak', 'custom');
+        localStorage.setItem('moonlight_cloak_title', tabTitleInput.value);
+        localStorage.setItem('moonlight_cloak_favicon', faviconUrlInput.value);
     };
 
     // Apply Tab Cloak
