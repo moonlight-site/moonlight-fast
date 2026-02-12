@@ -39,6 +39,11 @@
     .brand-text h1 { margin: 0; font-size: 24px; font-weight: 600; }
     .brand-text p { margin: 0; font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; font-weight: 500; }
 
+    .brand-stats { display: flex; align-items: center; gap: 10px; font-size: 12px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; font-weight: 500; margin-top: 8px; }
+    .online-indicator { width: 8px; height: 8px; background: #22c55e; border-radius: 50%; animation: pulse 2s infinite; }
+    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+    .online-count { color: #22c55e; font-weight: 600; }
+
     .controls { display: flex; gap: 10px; flex-wrap: wrap; }
 
     input, select, button {
@@ -252,6 +257,11 @@
             <div class="brand-text">
                 <h1>Moonlight</h1>
                 <p id="statusText">Connecting...</p>
+                <div class="brand-stats">
+                    <div class="online-indicator"></div>
+                    <span id="onlineCount" class="online-count">0</span>
+                    <span>Online</span>
+                </div>
             </div>
         </div>
         <div class="controls">
@@ -290,9 +300,13 @@
     let currentGame = null;
     let antiCloseEnabled = false;
     let skeletonTimeout = null;
+    let userId = null;
+    let realtimeSubscription = null;
+    let supabaseReady = false;
 
     const contentArea = document.getElementById('contentArea');
     const statusText = document.getElementById('statusText');
+    const onlineCount = document.getElementById('onlineCount');
     const gameModal = document.getElementById('gameModal');
     const gameFrame = document.getElementById('gameFrame');
     const skeletonLoader = document.getElementById('skeletonLoader');
@@ -336,6 +350,16 @@
             favicon: 'https://www.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=http://google.com/calculator&size=32'
         }
     };
+
+    // Generate unique user ID
+    function generateUserId() {
+        let id = localStorage.getItem('moonlight_user_id');
+        if (!id) {
+            id = 'user_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+            localStorage.setItem('moonlight_user_id', id);
+        }
+        return id;
+    }
 
     // Handle Mission Popup
     window.addEventListener('load', () => {
@@ -393,13 +417,11 @@
     function applyTabCloak(title, faviconUrl) {
         document.title = title;
         
-        // Remove existing favicon
         let favicon = document.querySelector('link[rel="icon"]');
         if (favicon) {
             favicon.remove();
         }
 
-        // Add new favicon if URL provided
         if (faviconUrl) {
             const newFavicon = document.createElement('link');
             newFavicon.rel = 'icon';
@@ -453,7 +475,11 @@
         const key = 'sb_publishable_Ej0sVQdRrHnWnctlZxWI3g_djchZi4L';
         if (window.supabase) {
             window.supabaseClient = window.supabase.createClient(url, key);
-            window.dispatchEvent(new CustomEvent('supabase-ready'));
+            supabaseReady = true;
+            console.log('Supabase initialized');
+            // NOW initialize online tracking
+            initOnlineTracking();
+            loadData();
         }
     }
 
@@ -464,12 +490,101 @@
         else statusText.innerText = `UPDATED ${diff} MINUTE${diff === 1 ? '' : 'S'} AGO`;
     }
 
+    // Fetch online count
+    async function fetchOnlineCount() {
+        try {
+            const { data, error } = await window.supabaseClient
+                .from('online_users')
+                .select('user_id', { count: 'exact' })
+                .gt('last_seen', new Date(Date.now() - 5 * 60000).toISOString());
+            
+            if (!error && data) {
+                onlineCount.textContent = data.length;
+                console.log('Online users:', data.length);
+            } else {
+                console.error('Error fetching online count:', error);
+            }
+        } catch (err) {
+            console.error('Error in fetchOnlineCount:', err);
+        }
+    }
+
+    // Initialize online tracking
+    async function initOnlineTracking() {
+        if (!supabaseReady) {
+            console.log('Supabase not ready yet, retrying...');
+            setTimeout(initOnlineTracking, 500);
+            return;
+        }
+
+        userId = generateUserId();
+        console.log('Initializing online tracking with user ID:', userId);
+
+        try {
+            // Insert user session
+            const { data, error } = await window.supabaseClient
+                .from('online_users')
+                .insert([{
+                    user_id: userId,
+                    last_seen: new Date().toISOString()
+                }]);
+
+            if (error) {
+                console.error('Error inserting user:', error);
+                return;
+            } else {
+                console.log('User inserted successfully');
+            }
+
+            // Fetch initial count
+            await fetchOnlineCount();
+
+            // Setup realtime subscription
+            realtimeSubscription = window.supabaseClient
+                .channel('online_users')
+                .on('postgres_changes', {
+                    event: '*',
+                    schema: 'public',
+                    table: 'online_users'
+                }, async (payload) => {
+                    console.log('Realtime update:', payload);
+                    await fetchOnlineCount();
+                })
+                .subscribe((status) => {
+                    console.log('Realtime subscription status:', status);
+                });
+
+            // Update last_seen every 30 seconds
+            setInterval(() => {
+                window.supabaseClient
+                    .from('online_users')
+                    .update({ last_seen: new Date().toISOString() })
+                    .eq('user_id', userId)
+                    .then(({ error }) => {
+                        if (error) console.error('Error updating last_seen:', error);
+                        else console.log('Updated last_seen at', new Date().toLocaleTimeString());
+                    });
+            }, 30000);
+
+        } catch (err) {
+            console.error('Error initializing online tracking:', err);
+        }
+    }
+
+    // Cleanup on page leave
+    window.addEventListener('beforeunload', async () => {
+        if (realtimeSubscription) {
+            realtimeSubscription.unsubscribe();
+        }
+        if (userId && supabaseReady) {
+            await window.supabaseClient.from('online_users').delete().eq('user_id', userId);
+        }
+    });
+
     async function loadData() {
-        // Show loading state on button
         const btnIcon = document.querySelector('#refreshBtn i');
         if(btnIcon) btnIcon.classList.add('fa-spin');
 
-        // Show skeleton loaders
         showMenuSkeletons();
 
         const { data, error } = await window.supabaseClient.from('games').select('*').range(0, 999);
@@ -477,7 +592,6 @@
         if (error) {
             console.error(error);
         } else {
-            // SORT A-Z by default
             games = data.sort((a, b) => a.name.localeCompare(b.name));
             fetchTime = Date.now();
             updateStatus();
@@ -514,14 +628,11 @@
     }
 
     function showSkeletonLoader() {
-        // Clear any existing timeout
         if (skeletonTimeout) clearTimeout(skeletonTimeout);
         
-        // Show skeleton loader
         skeletonLoader.classList.remove('hidden');
         gameFrame.classList.remove('loaded');
         
-        // Hide skeleton and show iframe after 3 seconds
         skeletonTimeout = setTimeout(() => {
             skeletonLoader.classList.add('hidden');
             gameFrame.classList.add('loaded');
@@ -570,7 +681,6 @@
         }
     };
     
-    // Fullscreen Logic
     document.getElementById('modalFullscreen').onclick = () => {
         const container = document.getElementById('gameContainer');
         if (!document.fullscreenElement) {
@@ -582,13 +692,12 @@
         }
     };
 
-    // SEARCH LOGIC: Filters by Name AND Tags
+    // SEARCH LOGIC
     document.getElementById('searchInput').oninput = (e) => {
         const term = e.target.value.toLowerCase();
         
         const filtered = games.filter(g => {
             const inName = g.name.toLowerCase().includes(term);
-            // Check tags (ensure 'tags' exists and is an array first)
             const inTags = g.tags && Array.isArray(g.tags) && g.tags.some(t => t.toLowerCase().includes(term));
             return inName || inTags;
         });
@@ -596,18 +705,22 @@
         renderGrid(filtered);
     };
 
-    // REFRESH BUTTON (Does not reload page, just fetches data)
+    // REFRESH BUTTON
     refreshBtn.onclick = () => {
-        document.getElementById('searchInput').value = ''; // Clear search
+        document.getElementById('searchInput').value = '';
         loadData();
     };
 
     // Status Timer
     setInterval(updateStatus, 60000);
 
-    // Init Logic
-    window.addEventListener('supabase-ready', loadData);
-    const checkSup = setInterval(() => { if(window.supabase) { initSupabase(); clearInterval(checkSup); } }, 100);
+    // Init Supabase - this is the key fix!
+    const checkSup = setInterval(() => { 
+        if(window.supabase) { 
+            initSupabase(); 
+            clearInterval(checkSup); 
+        } 
+    }, 100);
 
 </script>
 </body>
